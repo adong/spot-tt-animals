@@ -122,6 +122,42 @@
   .ptoast.sun { color: var(--yellow); }
   .ptoast.no { color: #ffb0b0; }
 
+  /* your brother: the big round button with his face (VS Computer) or both faces (HIGH FIVE), his time bar, his window on the fence */
+  .budbtn {
+    position: absolute; width: 92px; height: 92px; padding: 0; border-radius: 50%; pointer-events: auto; touch-action: none; --fill: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: conic-gradient(var(--yellow) calc(var(--fill) * 360deg), rgba(20, 18, 31, 0.7) 0); border: 4px solid #fff; box-shadow: 0 6px 0 var(--ink);
+  }
+  .budbtn .pics { display: flex; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); }
+  .budbtn .pics img { flex: 1; min-width: 0; height: 100%; object-fit: cover; }
+  .budbtn.two .pics img { object-position: 50% 30%; }
+  .budbtn small { position: absolute; bottom: -12px; left: 50%; translate: -50% 0; white-space: nowrap; font: 800 11px/1 'Rubik', sans-serif; letter-spacing: 0.5px; padding: 4px 9px; border-radius: 999px; background: var(--ink); border: 2px solid #fff; }
+  .budbtn kbd { position: absolute; top: -2px; right: -4px; }
+  .budbtn .sv { position: absolute; top: -6px; left: -6px; font-size: 20px; font-style: normal; line-height: 1; }
+  .budbtn .sv.used { filter: grayscale(1); opacity: 0.45; }
+  .budbtn.on { background: conic-gradient(#7dff5a calc(var(--fill) * 360deg), rgba(20, 18, 31, 0.7) 0); border-color: var(--yellow); box-shadow: 0 6px 0 var(--ink), 0 0 24px rgba(255, 212, 0, 0.9); }
+  .budbtn.rest .pics { filter: grayscale(1) brightness(0.85); }
+  .budbtn.down { transform: translateY(5px); box-shadow: 0 1px 0 var(--ink); }
+  .budbtn.no { animation: nope2 0.3s linear; }
+  .budbar { position: absolute; display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border-radius: 14px; background: var(--panel); border: 3px solid var(--yellow); width: 170px; }
+  .budbar img { width: 34px; height: 34px; border-radius: 10px; border: 2px solid #fff; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); object-fit: cover; }
+  .budbar i { position: relative; flex: 1; height: 12px; border-radius: 6px; background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.8); overflow: hidden; --fill: 0; }
+  .budbar i::after { content: ''; position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--fill)); background: linear-gradient(90deg, #9dff6a, #3fc22b); }
+  .budbar em { font-style: normal; font-size: 16px; }
+  .budbar em.used { filter: grayscale(1); opacity: 0.45; }
+  .spotc { position: fixed; display: none; pointer-events: none; }
+  .playing .spotc { display: block; }
+  .pip { position: fixed; pointer-events: none; border-radius: 16px; border: 4px solid #fff; box-shadow: 0 0 0 3px var(--ink), 0 10px 24px rgba(0, 0, 0, 0.45);
+    background: linear-gradient(180deg, #9ed8ff 0%, #cdebff 55%, #6cbf45 56%, #4f9a35 100%); transform-origin: 50% 100%; }
+  .pip.night { background: linear-gradient(180deg, #1b2350 0%, #34447e 55%, #3b6a2b 56%, #2a5020 100%); }
+  .piptag { position: fixed; pointer-events: none; font-family: var(--display); font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); white-space: nowrap; }
+  .treatfly { position: fixed; pointer-events: none; font-size: 34px; line-height: 1; }
+  .short .budbtn { width: 64px; height: 64px; }
+  .short .budbtn .pics { width: 50px; height: 50px; }
+  .short .budbtn small { font-size: 8px; padding: 3px 6px; bottom: -10px; }
+  .short .budbtn .sv { font-size: 15px; }
+  .touch .budbtn kbd { display: none; }
+
   /* the answer box: HOW MANY SHEEP? ... and the 0-20 number pad */
   .ask { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 12px 12px; border-radius: 18px; background: rgba(20, 18, 31, 0.86); border: 3px solid var(--yellow); pointer-events: auto; width: min(94%, 430px); }
   .ask .q { font-family: var(--display); font-size: clamp(16px, 2.6vw, 26px); line-height: 1; text-align: center; color: var(--yellow); -webkit-text-stroke: 1px var(--ink); paint-order: stroke fill; }
@@ -293,6 +329,7 @@
   .short .pow small { font-size: 8px; }
   .short .pow em { display: none; }
   .short .passive { font-size: 11px; padding: 5px 9px; bottom: 6px; }
+  .short .passive .ao { display: none; }
   .short .clicker { top: 6px; padding: 3px 6px; font-size: 10px; }
   .short .ask { gap: 4px; padding: 6px 8px 8px; border-radius: 14px; }
   .short .ansbox { height: 40px; min-width: 70px; font-size: 24px; }
@@ -339,7 +376,12 @@
 <canvas id="view"></canvas>
 <canvas id="mask0" class="mask"></canvas>
 <canvas id="mask1" class="mask"></canvas>
+<canvas id="spot0" class="spotc"></canvas>
+<canvas id="spot1" class="spotc"></canvas>
 <div id="fence"></div>
+<canvas id="pip" class="pip hidden"></canvas>
+<div id="pipTag" class="piptag hidden"></div>
+<div id="treatFly" class="treatfly hidden"></div>
 
 <div id="hud" class="hidden">
   <div class="card p0" id="card0"><div class="face"><img alt=""></div><div class="info"><div class="nm"><span class="n">TEDDY</span><span class="who">1P</span></div><div class="ab"></div><div class="pts"></div></div></div>
@@ -352,7 +394,7 @@
   </div>
   <div class="pui p0" id="pui0">
     <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">A</kbd><em></em></button>
-    <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS · always on</div>
+    <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
     <div class="clicker keyhint hidden" id="clk0"><kbd>W</kbd>+1 <kbd>S</kbd>−1 · <kbd>D</kbd>lock<b>●●</b></div>
     <div class="ask hidden" id="ask0"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp0"></div>
@@ -360,12 +402,14 @@
   </div>
   <div class="pui p1" id="pui1">
     <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">←</kbd><em></em></button>
-    <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS · always on</div>
+    <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
     <div class="clicker keyhint hidden" id="clk1"><kbd>↑</kbd>+1 <kbd>↓</kbd>−1 · <kbd>→</kbd>lock<b>●●</b></div>
     <div class="ask hidden" id="ask1"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp1"></div>
     <div class="ptoasts" id="pt1"></div>
   </div>
+  <button id="budBtn" class="budbtn hidden"><span class="pics"><img alt=""><img alt="" class="hidden"></span><small>CALL TOMMY</small><kbd>T</kbd><em class="sv">🛡️</em></button>
+  <div class="budbar hidden" id="budBar"><img alt=""><i></i><em title="he has your back once">🛡️</em></div>
   <div id="banner" class="banner hidden"></div>
   <div id="result" class="hidden">
     <div class="rl"><div class="verdict" id="verdict"></div><div class="sc" id="resScore"></div></div>
@@ -421,6 +465,7 @@
     <button id="goBtn" class="btn pulse">START ▶</button>
     <button id="setupBack" class="btn small ghost">◀ BACK</button>
   </div>
+  <p class="tag" id="budHint">👋 VS COMPUTER: call your brother any time with T or his face! Two players: T is a HIGH FIVE.</p>
   <p class="hint keys">Enter start · 1 two players · 2 vs computer · Esc back</p>
 </div>
 
@@ -457,6 +502,7 @@
   <div class="finTop">
     <div class="big yellow" id="finalTitle">WINNER!</div>
     <p class="tag" id="finalSub"></p>
+    <p class="tag hidden" id="finalSaves"></p>
   </div>
   <div class="finBot">
     <div class="stats"><div class="tally" id="finalGrid"></div></div>

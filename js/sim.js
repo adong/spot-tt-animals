@@ -37,6 +37,8 @@
     pilot: { id: 'pilot', power: 'spotlight', ability: 'spotlight' },
   };
   const powerOf = (char) => (CHARS[char] ? CHARS[char].power : null);
+  // the companion's treats, the same six in every family game
+  const TREATS = [['🍦', 'ICE CREAM'], ['💧', 'WATER'], ['🧃', 'JUICE'], ['🍪', 'COOKIE'], ['🍉', 'WATERMELON'], ['🍌', 'BANANA']];
   function powerTimes(cfg, kind) {
     if (kind === 'freeze') return { dur: cfg.characters.tommy.freezeDurationSeconds, cool: cfg.characters.tommy.cooldownSeconds };
     if (kind === 'spotlight') return { dur: cfg.characters.pilot.durationSeconds, cool: cfg.characters.pilot.cooldownSeconds };
@@ -165,7 +167,8 @@
   const PHASES = ['ready', 'observe', 'answer', 'result', 'final'];
 
   // o: { mode: '2p' | 'cpu' | 'demo', difficulty: 'easy' | 'medium' | 'hard', sky: 'day' | 'night' | 'mix',
-  //      chars: [p1, p2], seed, cfg, bothWrong, still (no animal movement: fast statistics), autoNext (seconds) }
+  //      chars: [p1, p2], seed, cfg, bothWrong, still (no animal movement: fast statistics), autoNext (seconds),
+  //      buddyFor (who comes when you call your brother; the game passes Kit.roster.buddyFor) }
   class Match {
     constructor(o = {}) {
       this.cfg = o.cfg || SPOT.CONFIG;
@@ -178,6 +181,11 @@
       this.autoNext = o.autoNext || 0;
       this.rngRound = makeRng(this.seed ^ 0x9e3779b9);
       this.rngCpu = makeRng(this.seed ^ 0x85ebca6b);
+      this.rngBuddy = makeRng(this.seed ^ 0x27d4eb2f); // the companion's own dice, so calling him never changes the computer
+      this.buddyFor = o.buddyFor || ((id) => (id === 'tommy' ? 'teddy' : 'tommy'));
+      this.buddy = null; // VS Computer: your brother, while he's visiting
+      this.cheerT = 0; // two players: how long the high five still rests
+      this.stats = { calls: 0, treats: 0, saves: 0, highFives: 0 };
       const chars = o.chars || ['teddy', 'tommy'];
       this.players = [0, 1].map((i) => ({
         i,
@@ -191,6 +199,7 @@
         power: { kind: powerOf(chars[i]), activeT: 0, coolT: 0, uses: 0 },
         ans: null,
         cpuWaitAt: null,
+        spotT: 0, // two players: a high five lets you spot your hiding animals this long
       }));
       this.rounds = this.cfg.roundsPerGame;
       this.observeT = this.cfg.difficulty[this.difficulty];
@@ -235,7 +244,7 @@
     makeField(type, count, P) { return makeField(this.cfg, type, count, P.rngField); }
     freshAnswer() {
       // two players share the keyboard with hidden clickers that start at 0; alone you type (or tap) a number
-      return { draft: this.mode === '2p' ? 0 : null, typed: null, pendT: 0, locked: false, value: null, at: null, how: null };
+      return { draft: this.mode === '2p' ? 0 : null, typed: null, pendT: 0, locked: false, value: null, at: null, how: null, saved: false, yours: null };
     }
 
     begin(phase) {
@@ -245,6 +254,7 @@
       if (phase === 'answer') {
         // observation is over: the binoculars close and every power stops
         for (const P of this.players) {
+          P.spotT = 0;
           if (P.power.activeT > 0) { P.power.activeT = 0; P.power.coolT = powerTimes(this.cfg, P.power.kind).cool; }
           this.applyPower(P, false);
         }
@@ -258,6 +268,8 @@
       this.t += dt;
       this.phaseT += dt;
       const cfg = this.cfg;
+      this.updateBuddy(dt);
+      if (this.cheerT > 0) this.cheerT = Math.max(0, this.cheerT - dt);
       if (this.phase === 'ready') {
         const tb = cfg.timing.roundBanner, cs = cfg.timing.countdownStep, n = RULES.readyCountdown;
         const k = this.phaseT < tb ? -1 : Math.floor((this.phaseT - tb) / cs + 1e-9);
@@ -265,6 +277,7 @@
         if (this.phaseT >= tb + n * cs - 1e-9) this.begin('observe');
       } else if (this.phase === 'observe') {
         this.tickPowers(dt);
+        for (const P of this.players) if (P.spotT > 0) P.spotT = Math.max(0, P.spotT - dt);
         this.cpuObserve();
         this.moveFields(dt);
         const left = this.observeT - this.phaseT;
@@ -273,6 +286,10 @@
         if (left <= 1e-9) this.begin('answer');
       } else if (this.phase === 'answer') {
         this.moveFields(dt);
+        // your brother has your back: nothing typed or locked with a moment left, and he shouts the number for you
+        const H = this.players[0], B = this.buddy;
+        if (this.mode === 'cpu' && cfg.companion.saves && this.buddyHere() && B.save && !H.ans.locked && H.ans.typed === null &&
+          this.phaseT >= this.answerT - cfg.companion.shoutBefore - 1e-9) this.buddySave(0, 'answer');
         this.players.forEach((P, i) => {
           const A = P.ans;
           if (A.locked) return;
@@ -413,18 +430,105 @@
       return true;
     }
 
+    // ---- your brother (Alan's series feature): VS Computer only, he only ever helps you, in your own field
+
+    lookOf(char) { return char === 'pilot' ? this.cfg.characters.pilot.who : char; }
+    callBuddy() {
+      if (this.mode === '2p') return this.highFive();
+      if (this.mode !== 'cpu' || this.phase === 'final') return 'none';
+      const c = this.cfg.companion, B = this.buddy;
+      this.stats.calls++;
+      if (!B) {
+        this.buddy = { kind: this.buddyFor(this.lookOf(this.players[0].char)), phase: 'hello', t: 0, helloT: c.helloSeconds, treatT: 0, treated: false, left: c.visitSeconds, visit: c.visitSeconds, save: !!c.saves, byeT: 0 };
+        this.emit('buddyHello', { who: this.buddy.kind, again: false });
+        return 'ok';
+      }
+      if (B.phase === 'bye' || B.treated) {
+        // called again: he says hi again, brings another treat, stays the whole visit again and re-arms his save
+        Object.assign(B, { phase: 'hello', helloT: c.helloSeconds, treatT: 0, treated: false, left: c.visitSeconds, save: !!c.saves, byeT: 0 });
+        this.emit('buddyHello', { who: B.kind, again: true });
+        return 'again';
+      }
+      B.left = c.visitSeconds; // called again before his treat landed: he just stays longer
+      return 'longer';
+    }
+    updateBuddy(dt) {
+      const B = this.buddy;
+      if (!B) return;
+      const c = this.cfg.companion;
+      B.t += dt;
+      if (B.phase === 'hello') {
+        B.helloT -= dt;
+        if (B.helloT <= 0) {
+          const [emoji, name] = TREATS[Math.floor(this.rngBuddy() * TREATS.length)];
+          B.phase = 'help';
+          B.treatT = c.treatFlySeconds;
+          this.emit('treat', { emoji, name, who: B.kind });
+        }
+      } else if (B.phase === 'help' && B.treatT > 0) {
+        B.treatT -= dt;
+        if (B.treatT <= 0) { B.treated = true; this.stats.treats++; this.emit('treatGot', { who: B.kind }); }
+      }
+      if (B.phase !== 'bye') {
+        B.left -= dt;
+        if (B.left <= 0) { B.left = 0; B.phase = 'bye'; B.byeT = c.byeSeconds; this.emit('buddyBye', { who: B.kind }); }
+      } else {
+        B.byeT -= dt;
+        if (B.byeT <= 0) { this.buddy = null; this.emit('buddyOut', { who: B.kind }); }
+      }
+    }
+    buddyHere() { return !!this.buddy && this.buddy.phase !== 'bye'; }
+    buddySave(i, how) {
+      const P = this.players[i], A = P.ans;
+      this.buddy.save = false;
+      this.stats.saves++;
+      if (how === 'answer') { A.yours = null; this.lockValue(i, P.field.count, 'buddy'); }
+      else { A.yours = A.value; A.value = P.field.count; A.how = 'buddy'; }
+      A.saved = true;
+      this.emit('buddySave', { i, who: this.buddy.kind, how }); // never the number
+    }
+    // two players: the high five. Both brothers spot their own hiding animals for a while; then it rests.
+    cheerRest() { const r = this.cfg.companion.highFiveRest; return r[this.difficulty] !== undefined ? r[this.difficulty] : r.medium; }
+    highFive() {
+      if (this.mode !== '2p') return 'none';
+      const no = (why) => { this.emit('cheerNo', { why }); return why; };
+      if (this.phase !== 'observe') return no('phase');
+      if (this.cheerT > 0) return no('rest');
+      for (const P of this.players) P.spotT = this.cfg.companion.highFiveSpotSeconds;
+      this.cheerT = this.cheerRest();
+      this.stats.highFives++;
+      const treats = this.players.map(() => { const [emoji, name] = TREATS[Math.floor(this.rngBuddy() * TREATS.length)]; return { emoji, name }; });
+      this.emit('highFive', { treats });
+      return 'ok';
+    }
+    // spotting: your brother (or a high five) shows you where your own hiding animals are; never anyone else's
+    spotting(i) {
+      if (this.phase !== 'observe') return false;
+      return (this.mode === 'cpu' && i === 0 && this.buddyHere()) || this.players[i].spotT > 0;
+    }
+    spotted(i) {
+      if (!this.spotting(i)) return [];
+      const r = this.lensFor(i);
+      return this.players[i].field.animals.filter((a) => !inLens(this.cfg, r, a.x, a.z, 0.4));
+    }
+
     // ---- the reveal
 
     score(answers, counts) { return scoreRound(answers, counts, this.bothWrong); }
     reveal() {
       // a 1 or 2 typed inside the window counts even if its little wait for a second digit wasn't over
       this.players.forEach((P, i) => { if (!P.ans.locked && P.ans.typed !== null) this.lockValue(i, P.ans.typed, 'typed'); });
+      // ...and a wrong answer while he's there becomes the right one, once per visit
+      const H = this.players[0];
+      if (this.mode === 'cpu' && this.cfg.companion.saves && this.buddyHere() && this.buddy.save && H.ans.locked && H.ans.value !== H.field.count) this.buddySave(0, 'fix');
       const answers = this.players.map((P) => (P.ans.locked ? P.ans.value : null));
       const counts = this.players.map((P) => P.field.count);
       const res = this.score(answers, counts);
       if (res.winner !== null) this.players[res.winner].score += this.cfg.scoring.roundWin;
       else for (const P of this.players) P.score += this.cfg.scoring.draw;
-      const r = Object.assign({ round: this.round, animal: this.roundInfo.type, sky: this.roundInfo.sky, counts, answers }, res);
+      const saved = this.players.map((P) => !!P.ans.saved);
+      const yours = this.players.map((P, i) => (P.ans.saved ? P.ans.yours : answers[i]));
+      const r = Object.assign({ round: this.round, animal: this.roundInfo.type, sky: this.roundInfo.sky, counts, answers, saved, yours }, res);
       this.results.push(r);
       this.phase = 'result';
       this.phaseT = 0;
@@ -476,10 +580,15 @@
             answer: shown && A.locked ? A.value : null,
             count: shown ? P.field.count : null,
             correct: last ? last.correct[i] : null,
+            saved: last ? last.saved[i] : null,
+            yours: last ? last.yours[i] : null,
+            spotting: this.spotting(i),
           };
         }),
         result: last,
         final: this.final,
+        buddy: this.buddy ? { kind: this.buddy.kind, phase: this.buddy.phase, left: Math.max(0, this.buddy.left), visit: this.buddy.visit, save: this.buddy.save, here: this.buddyHere(), treated: this.buddy.treated } : null,
+        cheer: this.mode === '2p' ? { rest: this.cheerT, restMax: this.cheerRest(), ready: this.cheerT <= 0 && this.phase === 'observe' } : null,
       };
     }
   }
@@ -516,5 +625,5 @@
     },
   };
 
-  SPOT.sim = { Match, PHASES, CHARS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, lensCover, powerTimes, progress };
+  SPOT.sim = { Match, PHASES, CHARS, TREATS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, lensCover, powerTimes, progress };
 })();

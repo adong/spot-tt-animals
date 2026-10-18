@@ -122,6 +122,42 @@
   .ptoast.sun { color: var(--yellow); }
   .ptoast.no { color: #ffb0b0; }
 
+  /* your brother: the big round button with his face (VS Computer) or both faces (HIGH FIVE), his time bar, his window on the fence */
+  .budbtn {
+    position: absolute; width: 92px; height: 92px; padding: 0; border-radius: 50%; pointer-events: auto; touch-action: none; --fill: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: conic-gradient(var(--yellow) calc(var(--fill) * 360deg), rgba(20, 18, 31, 0.7) 0); border: 4px solid #fff; box-shadow: 0 6px 0 var(--ink);
+  }
+  .budbtn .pics { display: flex; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); }
+  .budbtn .pics img { flex: 1; min-width: 0; height: 100%; object-fit: cover; }
+  .budbtn.two .pics img { object-position: 50% 30%; }
+  .budbtn small { position: absolute; bottom: -12px; left: 50%; translate: -50% 0; white-space: nowrap; font: 800 11px/1 'Rubik', sans-serif; letter-spacing: 0.5px; padding: 4px 9px; border-radius: 999px; background: var(--ink); border: 2px solid #fff; }
+  .budbtn kbd { position: absolute; top: -2px; right: -4px; }
+  .budbtn .sv { position: absolute; top: -6px; left: -6px; font-size: 20px; font-style: normal; line-height: 1; }
+  .budbtn .sv.used { filter: grayscale(1); opacity: 0.45; }
+  .budbtn.on { background: conic-gradient(#7dff5a calc(var(--fill) * 360deg), rgba(20, 18, 31, 0.7) 0); border-color: var(--yellow); box-shadow: 0 6px 0 var(--ink), 0 0 24px rgba(255, 212, 0, 0.9); }
+  .budbtn.rest .pics { filter: grayscale(1) brightness(0.85); }
+  .budbtn.down { transform: translateY(5px); box-shadow: 0 1px 0 var(--ink); }
+  .budbtn.no { animation: nope2 0.3s linear; }
+  .budbar { position: absolute; display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border-radius: 14px; background: var(--panel); border: 3px solid var(--yellow); width: 170px; }
+  .budbar img { width: 34px; height: 34px; border-radius: 10px; border: 2px solid #fff; background: radial-gradient(circle at 50% 35%, #ffe2a0, #ff9f1c); object-fit: cover; }
+  .budbar i { position: relative; flex: 1; height: 12px; border-radius: 6px; background: rgba(20, 18, 31, 0.6); border: 2px solid rgba(255, 255, 255, 0.8); overflow: hidden; --fill: 0; }
+  .budbar i::after { content: ''; position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--fill)); background: linear-gradient(90deg, #9dff6a, #3fc22b); }
+  .budbar em { font-style: normal; font-size: 16px; }
+  .budbar em.used { filter: grayscale(1); opacity: 0.45; }
+  .spotc { position: fixed; display: none; pointer-events: none; }
+  .playing .spotc { display: block; }
+  .pip { position: fixed; pointer-events: none; border-radius: 16px; border: 4px solid #fff; box-shadow: 0 0 0 3px var(--ink), 0 10px 24px rgba(0, 0, 0, 0.45);
+    background: linear-gradient(180deg, #9ed8ff 0%, #cdebff 55%, #6cbf45 56%, #4f9a35 100%); transform-origin: 50% 100%; }
+  .pip.night { background: linear-gradient(180deg, #1b2350 0%, #34447e 55%, #3b6a2b 56%, #2a5020 100%); }
+  .piptag { position: fixed; pointer-events: none; font-family: var(--display); font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); white-space: nowrap; }
+  .treatfly { position: fixed; pointer-events: none; font-size: 34px; line-height: 1; }
+  .short .budbtn { width: 64px; height: 64px; }
+  .short .budbtn .pics { width: 50px; height: 50px; }
+  .short .budbtn small { font-size: 8px; padding: 3px 6px; bottom: -10px; }
+  .short .budbtn .sv { font-size: 15px; }
+  .touch .budbtn kbd { display: none; }
+
   /* the answer box: HOW MANY SHEEP? ... and the 0-20 number pad */
   .ask { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 12px 12px; border-radius: 18px; background: rgba(20, 18, 31, 0.86); border: 3px solid var(--yellow); pointer-events: auto; width: min(94%, 430px); }
   .ask .q { font-family: var(--display); font-size: clamp(16px, 2.6vw, 26px); line-height: 1; text-align: center; color: var(--yellow); -webkit-text-stroke: 1px var(--ink); paint-order: stroke fill; }
@@ -293,6 +329,7 @@
   .short .pow small { font-size: 8px; }
   .short .pow em { display: none; }
   .short .passive { font-size: 11px; padding: 5px 9px; bottom: 6px; }
+  .short .passive .ao { display: none; }
   .short .clicker { top: 6px; padding: 3px 6px; font-size: 10px; }
   .short .ask { gap: 4px; padding: 6px 8px 8px; border-radius: 14px; }
   .short .ansbox { height: 40px; min-width: 70px; font-size: 24px; }
@@ -339,7 +376,12 @@
 <canvas id="view"></canvas>
 <canvas id="mask0" class="mask"></canvas>
 <canvas id="mask1" class="mask"></canvas>
+<canvas id="spot0" class="spotc"></canvas>
+<canvas id="spot1" class="spotc"></canvas>
 <div id="fence"></div>
+<canvas id="pip" class="pip hidden"></canvas>
+<div id="pipTag" class="piptag hidden"></div>
+<div id="treatFly" class="treatfly hidden"></div>
 
 <div id="hud" class="hidden">
   <div class="card p0" id="card0"><div class="face"><img alt=""></div><div class="info"><div class="nm"><span class="n">TEDDY</span><span class="who">1P</span></div><div class="ab"></div><div class="pts"></div></div></div>
@@ -352,7 +394,7 @@
   </div>
   <div class="pui p0" id="pui0">
     <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">A</kbd><em></em></button>
-    <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS · always on</div>
+    <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
     <div class="clicker keyhint hidden" id="clk0"><kbd>W</kbd>+1 <kbd>S</kbd>−1 · <kbd>D</kbd>lock<b>●●</b></div>
     <div class="ask hidden" id="ask0"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp0"></div>
@@ -360,12 +402,14 @@
   </div>
   <div class="pui p1" id="pui1">
     <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">←</kbd><em></em></button>
-    <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS · always on</div>
+    <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
     <div class="clicker keyhint hidden" id="clk1"><kbd>↑</kbd>+1 <kbd>↓</kbd>−1 · <kbd>→</kbd>lock<b>●●</b></div>
     <div class="ask hidden" id="ask1"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp1"></div>
     <div class="ptoasts" id="pt1"></div>
   </div>
+  <button id="budBtn" class="budbtn hidden"><span class="pics"><img alt=""><img alt="" class="hidden"></span><small>CALL TOMMY</small><kbd>T</kbd><em class="sv">🛡️</em></button>
+  <div class="budbar hidden" id="budBar"><img alt=""><i></i><em title="he has your back once">🛡️</em></div>
   <div id="banner" class="banner hidden"></div>
   <div id="result" class="hidden">
     <div class="rl"><div class="verdict" id="verdict"></div><div class="sc" id="resScore"></div></div>
@@ -421,6 +465,7 @@
     <button id="goBtn" class="btn pulse">START ▶</button>
     <button id="setupBack" class="btn small ghost">◀ BACK</button>
   </div>
+  <p class="tag" id="budHint">👋 VS COMPUTER: call your brother any time with T or his face! Two players: T is a HIGH FIVE.</p>
   <p class="hint keys">Enter start · 1 two players · 2 vs computer · Esc back</p>
 </div>
 
@@ -457,6 +502,7 @@
   <div class="finTop">
     <div class="big yellow" id="finalTitle">WINNER!</div>
     <p class="tag" id="finalSub"></p>
+    <p class="tag hidden" id="finalSaves"></p>
   </div>
   <div class="finBot">
     <div class="stats"><div class="tally" id="finalGrid"></div></div>
@@ -1936,6 +1982,22 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       powerWait: [1.5, 6], // seconds it waits after its power is ready before using it
     },
 
+    // ALAN'S SERIES FEATURE (in every family game, not in Teddy's document): call your brother.
+    // VS Computer: T (or his face) brings the other brother. He says hi, tosses a treat, and for his visit he spots
+    // the animals hiding outside YOUR lenses (arrows on your rim). Once per visit he has your back: a wrong answer, or
+    // none with shoutBefore seconds left, becomes the right number ("TOMMY SAVED YOU!"). He never helps the computer.
+    // Two players: T is a HIGH FIVE that lets BOTH players spot their own hiding animals for a while, then rests.
+    companion: {
+      visitSeconds: 10,
+      helloSeconds: 1.6,
+      treatFlySeconds: 0.9,
+      byeSeconds: 1.2,
+      saves: true,
+      shoutBefore: 0.6, // he answers for you inside the 3 s, so Teddy's 3-second rule still holds
+      highFiveSpotSeconds: 5,
+      highFiveRest: { easy: 12, medium: 20, hard: 20 },
+    },
+
     // PROPOSAL: on 'mix' nights and days are picked at random each round (both players share one).
     sky: { mixNightChance: 0.5 },
 
@@ -2006,6 +2068,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     pilot: { id: 'pilot', power: 'spotlight', ability: 'spotlight' },
   };
   const powerOf = (char) => (CHARS[char] ? CHARS[char].power : null);
+  // the companion's treats, the same six in every family game
+  const TREATS = [['🍦', 'ICE CREAM'], ['💧', 'WATER'], ['🧃', 'JUICE'], ['🍪', 'COOKIE'], ['🍉', 'WATERMELON'], ['🍌', 'BANANA']];
   function powerTimes(cfg, kind) {
     if (kind === 'freeze') return { dur: cfg.characters.tommy.freezeDurationSeconds, cool: cfg.characters.tommy.cooldownSeconds };
     if (kind === 'spotlight') return { dur: cfg.characters.pilot.durationSeconds, cool: cfg.characters.pilot.cooldownSeconds };
@@ -2134,7 +2198,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
   const PHASES = ['ready', 'observe', 'answer', 'result', 'final'];
 
   // o: { mode: '2p' | 'cpu' | 'demo', difficulty: 'easy' | 'medium' | 'hard', sky: 'day' | 'night' | 'mix',
-  //      chars: [p1, p2], seed, cfg, bothWrong, still (no animal movement: fast statistics), autoNext (seconds) }
+  //      chars: [p1, p2], seed, cfg, bothWrong, still (no animal movement: fast statistics), autoNext (seconds),
+  //      buddyFor (who comes when you call your brother; the game passes Kit.roster.buddyFor) }
   class Match {
     constructor(o = {}) {
       this.cfg = o.cfg || SPOT.CONFIG;
@@ -2147,6 +2212,11 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       this.autoNext = o.autoNext || 0;
       this.rngRound = makeRng(this.seed ^ 0x9e3779b9);
       this.rngCpu = makeRng(this.seed ^ 0x85ebca6b);
+      this.rngBuddy = makeRng(this.seed ^ 0x27d4eb2f); // the companion's own dice, so calling him never changes the computer
+      this.buddyFor = o.buddyFor || ((id) => (id === 'tommy' ? 'teddy' : 'tommy'));
+      this.buddy = null; // VS Computer: your brother, while he's visiting
+      this.cheerT = 0; // two players: how long the high five still rests
+      this.stats = { calls: 0, treats: 0, saves: 0, highFives: 0 };
       const chars = o.chars || ['teddy', 'tommy'];
       this.players = [0, 1].map((i) => ({
         i,
@@ -2160,6 +2230,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         power: { kind: powerOf(chars[i]), activeT: 0, coolT: 0, uses: 0 },
         ans: null,
         cpuWaitAt: null,
+        spotT: 0, // two players: a high five lets you spot your hiding animals this long
       }));
       this.rounds = this.cfg.roundsPerGame;
       this.observeT = this.cfg.difficulty[this.difficulty];
@@ -2204,7 +2275,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     makeField(type, count, P) { return makeField(this.cfg, type, count, P.rngField); }
     freshAnswer() {
       // two players share the keyboard with hidden clickers that start at 0; alone you type (or tap) a number
-      return { draft: this.mode === '2p' ? 0 : null, typed: null, pendT: 0, locked: false, value: null, at: null, how: null };
+      return { draft: this.mode === '2p' ? 0 : null, typed: null, pendT: 0, locked: false, value: null, at: null, how: null, saved: false, yours: null };
     }
 
     begin(phase) {
@@ -2214,6 +2285,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       if (phase === 'answer') {
         // observation is over: the binoculars close and every power stops
         for (const P of this.players) {
+          P.spotT = 0;
           if (P.power.activeT > 0) { P.power.activeT = 0; P.power.coolT = powerTimes(this.cfg, P.power.kind).cool; }
           this.applyPower(P, false);
         }
@@ -2227,6 +2299,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       this.t += dt;
       this.phaseT += dt;
       const cfg = this.cfg;
+      this.updateBuddy(dt);
+      if (this.cheerT > 0) this.cheerT = Math.max(0, this.cheerT - dt);
       if (this.phase === 'ready') {
         const tb = cfg.timing.roundBanner, cs = cfg.timing.countdownStep, n = RULES.readyCountdown;
         const k = this.phaseT < tb ? -1 : Math.floor((this.phaseT - tb) / cs + 1e-9);
@@ -2234,6 +2308,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         if (this.phaseT >= tb + n * cs - 1e-9) this.begin('observe');
       } else if (this.phase === 'observe') {
         this.tickPowers(dt);
+        for (const P of this.players) if (P.spotT > 0) P.spotT = Math.max(0, P.spotT - dt);
         this.cpuObserve();
         this.moveFields(dt);
         const left = this.observeT - this.phaseT;
@@ -2242,6 +2317,10 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         if (left <= 1e-9) this.begin('answer');
       } else if (this.phase === 'answer') {
         this.moveFields(dt);
+        // your brother has your back: nothing typed or locked with a moment left, and he shouts the number for you
+        const H = this.players[0], B = this.buddy;
+        if (this.mode === 'cpu' && cfg.companion.saves && this.buddyHere() && B.save && !H.ans.locked && H.ans.typed === null &&
+          this.phaseT >= this.answerT - cfg.companion.shoutBefore - 1e-9) this.buddySave(0, 'answer');
         this.players.forEach((P, i) => {
           const A = P.ans;
           if (A.locked) return;
@@ -2382,18 +2461,105 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       return true;
     }
 
+    // ---- your brother (Alan's series feature): VS Computer only, he only ever helps you, in your own field
+
+    lookOf(char) { return char === 'pilot' ? this.cfg.characters.pilot.who : char; }
+    callBuddy() {
+      if (this.mode === '2p') return this.highFive();
+      if (this.mode !== 'cpu' || this.phase === 'final') return 'none';
+      const c = this.cfg.companion, B = this.buddy;
+      this.stats.calls++;
+      if (!B) {
+        this.buddy = { kind: this.buddyFor(this.lookOf(this.players[0].char)), phase: 'hello', t: 0, helloT: c.helloSeconds, treatT: 0, treated: false, left: c.visitSeconds, visit: c.visitSeconds, save: !!c.saves, byeT: 0 };
+        this.emit('buddyHello', { who: this.buddy.kind, again: false });
+        return 'ok';
+      }
+      if (B.phase === 'bye' || B.treated) {
+        // called again: he says hi again, brings another treat, stays the whole visit again and re-arms his save
+        Object.assign(B, { phase: 'hello', helloT: c.helloSeconds, treatT: 0, treated: false, left: c.visitSeconds, save: !!c.saves, byeT: 0 });
+        this.emit('buddyHello', { who: B.kind, again: true });
+        return 'again';
+      }
+      B.left = c.visitSeconds; // called again before his treat landed: he just stays longer
+      return 'longer';
+    }
+    updateBuddy(dt) {
+      const B = this.buddy;
+      if (!B) return;
+      const c = this.cfg.companion;
+      B.t += dt;
+      if (B.phase === 'hello') {
+        B.helloT -= dt;
+        if (B.helloT <= 0) {
+          const [emoji, name] = TREATS[Math.floor(this.rngBuddy() * TREATS.length)];
+          B.phase = 'help';
+          B.treatT = c.treatFlySeconds;
+          this.emit('treat', { emoji, name, who: B.kind });
+        }
+      } else if (B.phase === 'help' && B.treatT > 0) {
+        B.treatT -= dt;
+        if (B.treatT <= 0) { B.treated = true; this.stats.treats++; this.emit('treatGot', { who: B.kind }); }
+      }
+      if (B.phase !== 'bye') {
+        B.left -= dt;
+        if (B.left <= 0) { B.left = 0; B.phase = 'bye'; B.byeT = c.byeSeconds; this.emit('buddyBye', { who: B.kind }); }
+      } else {
+        B.byeT -= dt;
+        if (B.byeT <= 0) { this.buddy = null; this.emit('buddyOut', { who: B.kind }); }
+      }
+    }
+    buddyHere() { return !!this.buddy && this.buddy.phase !== 'bye'; }
+    buddySave(i, how) {
+      const P = this.players[i], A = P.ans;
+      this.buddy.save = false;
+      this.stats.saves++;
+      if (how === 'answer') { A.yours = null; this.lockValue(i, P.field.count, 'buddy'); }
+      else { A.yours = A.value; A.value = P.field.count; A.how = 'buddy'; }
+      A.saved = true;
+      this.emit('buddySave', { i, who: this.buddy.kind, how }); // never the number
+    }
+    // two players: the high five. Both brothers spot their own hiding animals for a while; then it rests.
+    cheerRest() { const r = this.cfg.companion.highFiveRest; return r[this.difficulty] !== undefined ? r[this.difficulty] : r.medium; }
+    highFive() {
+      if (this.mode !== '2p') return 'none';
+      const no = (why) => { this.emit('cheerNo', { why }); return why; };
+      if (this.phase !== 'observe') return no('phase');
+      if (this.cheerT > 0) return no('rest');
+      for (const P of this.players) P.spotT = this.cfg.companion.highFiveSpotSeconds;
+      this.cheerT = this.cheerRest();
+      this.stats.highFives++;
+      const treats = this.players.map(() => { const [emoji, name] = TREATS[Math.floor(this.rngBuddy() * TREATS.length)]; return { emoji, name }; });
+      this.emit('highFive', { treats });
+      return 'ok';
+    }
+    // spotting: your brother (or a high five) shows you where your own hiding animals are; never anyone else's
+    spotting(i) {
+      if (this.phase !== 'observe') return false;
+      return (this.mode === 'cpu' && i === 0 && this.buddyHere()) || this.players[i].spotT > 0;
+    }
+    spotted(i) {
+      if (!this.spotting(i)) return [];
+      const r = this.lensFor(i);
+      return this.players[i].field.animals.filter((a) => !inLens(this.cfg, r, a.x, a.z, 0.4));
+    }
+
     // ---- the reveal
 
     score(answers, counts) { return scoreRound(answers, counts, this.bothWrong); }
     reveal() {
       // a 1 or 2 typed inside the window counts even if its little wait for a second digit wasn't over
       this.players.forEach((P, i) => { if (!P.ans.locked && P.ans.typed !== null) this.lockValue(i, P.ans.typed, 'typed'); });
+      // ...and a wrong answer while he's there becomes the right one, once per visit
+      const H = this.players[0];
+      if (this.mode === 'cpu' && this.cfg.companion.saves && this.buddyHere() && this.buddy.save && H.ans.locked && H.ans.value !== H.field.count) this.buddySave(0, 'fix');
       const answers = this.players.map((P) => (P.ans.locked ? P.ans.value : null));
       const counts = this.players.map((P) => P.field.count);
       const res = this.score(answers, counts);
       if (res.winner !== null) this.players[res.winner].score += this.cfg.scoring.roundWin;
       else for (const P of this.players) P.score += this.cfg.scoring.draw;
-      const r = Object.assign({ round: this.round, animal: this.roundInfo.type, sky: this.roundInfo.sky, counts, answers }, res);
+      const saved = this.players.map((P) => !!P.ans.saved);
+      const yours = this.players.map((P, i) => (P.ans.saved ? P.ans.yours : answers[i]));
+      const r = Object.assign({ round: this.round, animal: this.roundInfo.type, sky: this.roundInfo.sky, counts, answers, saved, yours }, res);
       this.results.push(r);
       this.phase = 'result';
       this.phaseT = 0;
@@ -2445,10 +2611,15 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
             answer: shown && A.locked ? A.value : null,
             count: shown ? P.field.count : null,
             correct: last ? last.correct[i] : null,
+            saved: last ? last.saved[i] : null,
+            yours: last ? last.yours[i] : null,
+            spotting: this.spotting(i),
           };
         }),
         result: last,
         final: this.final,
+        buddy: this.buddy ? { kind: this.buddy.kind, phase: this.buddy.phase, left: Math.max(0, this.buddy.left), visit: this.buddy.visit, save: this.buddy.save, here: this.buddyHere(), treated: this.buddy.treated } : null,
+        cheer: this.mode === '2p' ? { rest: this.cheerT, restMax: this.cheerRest(), ready: this.cheerT <= 0 && this.phase === 'observe' } : null,
       };
     }
   }
@@ -2485,7 +2656,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     },
   };
 
-  SPOT.sim = { Match, PHASES, CHARS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, lensCover, powerTimes, progress };
+  SPOT.sim = { Match, PHASES, CHARS, TREATS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, lensCover, powerTimes, progress };
 })();
 
 </script>
@@ -3038,7 +3209,115 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     return out;
   }
 
-  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies };
+  // ---------------------------------------------------------------- 14. your brother (Alan's series feature)
+
+  function buddy(env) {
+    const out = [], C = env.cfg.companion, R = SPOT.RULES;
+    const ok = (name, cond, info) => out.push({ name, ok: !!cond, info: info || '' });
+    const toAnswer = (m) => stepUntil(m, (x) => x.phase === 'answer');
+    // who comes
+    const who = ['teddy', 'tommy', 'pilot'].map((c) => { const m = mk(env, { mode: 'cpu', chars: [c, 'teddy'] }); m.callBuddy(); return m.buddy && m.buddy.kind; });
+    ok('VS Computer: T brings the other brother (Tommy for Teddy, Teddy for Tommy, Tommy for the pilot)', who.join() === 'tommy,teddy,tommy', who.join());
+    // hello, treat, visit, goodbye
+    let m = mk(env, { mode: 'cpu', seed: 81, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    drain(m);
+    m.callBuddy();
+    const ev1 = [];
+    stepUntil(m, (x) => !x.buddy, 30, DT, (x) => { for (const e of drain(x)) ev1.push([e.type, x.buddy ? x.buddy.t : 99]); });
+    const types = ev1.map((e) => e[0]);
+    const byeAt = (ev1.find((e) => e[0] === 'buddyBye') || [0, 0])[1];
+    ok('he says hi, tosses a treat that lands, stays his visit, then says bye and goes', ['buddyHello', 'treat', 'treatGot', 'buddyBye', 'buddyOut'].every((t) => types.includes(t)) && types.indexOf('treat') < types.indexOf('treatGot') && near(byeAt, C.visitSeconds, 0.05), `${types.filter((t) => /buddy|treat/.test(t)).join(' ')}; bye after ${byeAt.toFixed(2)} s`);
+    // call again: hello, treat and the whole visit again, never two
+    m = mk(env, { mode: 'cpu', seed: 82, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    m.callBuddy();
+    stepUntil(m, (x) => x.buddy && x.buddy.treated, 5);
+    stepUntil(m, (x) => x.buddy.left < 4, 10);
+    m.buddy.save = false;
+    drain(m);
+    const again = m.callBuddy();
+    const ev2 = []; stepUntil(m, (x) => x.buddy.treated, 5, DT, (x) => { for (const e of drain(x)) ev2.push(e.type); });
+    ok('calling again (no cooldown): another hello and treat, the whole visit again, the save re-armed', again === 'again' && ev2.includes('buddyHello') && ev2.includes('treatGot') && m.buddy.left > C.visitSeconds - 3 && m.buddy.save);
+    m.callBuddy(); m.callBuddy(); m.callBuddy();
+    ok('quick calls never bring two brothers', !!m.buddy && m.stats.calls >= 5);
+    // spotting: your own hiding animals, never the computer's
+    m = mk(env, { mode: 'cpu', seed: 83, difficulty: 'medium', chars: ['tommy', 'tommy'], tweakCounts: () => [20, 20] });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    const before = m.spotted(0).length;
+    m.callBuddy();
+    m.step(DT);
+    const sp = m.spotted(0), hidden = 20 - m.visibleCount(0), v = m.view();
+    ok('while he\'s there he spots your hiding animals (only yours: never the computer\'s)', before === 0 && sp.length === hidden && hidden > 0 && sp.every((a) => m.players[0].field.animals.includes(a)) && !m.spotting(1) && m.spotted(1).length === 0 && v.players[0].spotting && !v.players[1].spotting, `${sp.length} hiding, computer spotted ${m.spotted(1).length}`);
+    // the save
+    const saveRound = (how, call = true) => {
+      const x = mk(env, { mode: 'cpu', seed: 84, difficulty: 'hard' });
+      stepUntil(x, (y) => y.phase === 'observe' && y.observeT - y.phaseT < 4);
+      if (call) x.callBuddy();
+      toAnswer(x);
+      const c = x.players[0].field.count;
+      if (how === 'wrong') { stepUntil(x, (y) => y.phaseT > 0.4); x.pick(0, wrongFor(c)); }
+      if (how === 'right') { stepUntil(x, (y) => y.phaseT > 0.4); x.pick(0, c); }
+      const evs = [];
+      stepUntil(x, (y) => y.phase === 'result', 4, DT, (y) => { for (const e of drain(y)) evs.push(e); });
+      return { x, r: x.results[0], c, evs, at: x.players[0].ans.at };
+    };
+    let t = saveRound('wrong');
+    ok('he has your back: a wrong answer while he\'s there becomes right ("TOMMY SAVED YOU!")', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === wrongFor(t.c) && t.r.answers[0] === t.c && t.evs.some((e) => e.type === 'buddySave' && !('value' in e)));
+    t = saveRound('none');
+    ok('no answer with a moment left: he shouts the number for you, inside the 3 s', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === null && t.at <= R.answerSeconds - C.shoutBefore + 0.05 && t.at >= R.answerSeconds - C.shoutBefore - 0.05, `locked at ${t.at && t.at.toFixed(2)} s`);
+    t = saveRound('right');
+    ok('a right answer needs no save (and keeps his save)', t.r.correct[0] && !t.r.saved[0] && t.x.buddy && t.x.buddy.save);
+    t = saveRound('wrong', false);
+    const t2 = saveRound('none', false);
+    ok('without him there\'s no save: wrong stays wrong, no answer stays no answer', !t.r.correct[0] && !t.r.saved[0] && t2.r.answers[0] === null && !t2.r.saved[0]);
+    // once per visit, and not after he's gone
+    m = mk(env, { mode: 'cpu', seed: 85, difficulty: 'hard' });
+    stepUntil(m, (x) => x.phase === 'answer');
+    m.callBuddy();
+    stepUntil(m, (x) => x.phaseT > 0.3);
+    m.pick(0, wrongFor(m.players[0].field.count));
+    m.buddySave(0, 'fix');
+    const used = m.buddy.save;
+    ok('one save per visit (the 🛡️ is used up)', used === false && m.view().buddy.save === false);
+    m = mk(env, { mode: 'cpu', seed: 86, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    m.callBuddy();
+    toAnswer(m);
+    stepUntil(m, (x) => x.phaseT > 0.4);
+    m.pick(0, wrongFor(m.players[0].field.count));
+    stepUntil(m, (x) => x.phase === 'result', 4);
+    ok('called at the start of a long round, he\'s gone by the answer, so no save', !m.buddy && !m.results[0].saved[0] && !m.results[0].correct[0]);
+    // two players: the high five
+    m = mk(env, { mode: '2p', seed: 87, difficulty: 'medium', tweakCounts: () => [20, 20] });
+    ok('two players: no visiting brother, T is a high five (and only while counting)', m.callBuddy() === 'phase' && !m.buddy);
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    drain(m);
+    const hf = m.callBuddy();
+    const hev = drain(m);
+    const both = [0, 1].map((i) => m.spotting(i) && m.spotted(i).length === 20 - m.visibleCount(i) && m.spotted(i).every((a) => m.players[i].field.animals.includes(a)));
+    ok('HIGH FIVE: both players spot their own hiding animals, a treat each', hf === 'ok' && both.every(Boolean) && hev.some((e) => e.type === 'highFive' && e.treats.length === 2));
+    ok(`then it rests ${C.highFiveRest.medium} s (${C.highFiveRest.easy} s on easy), and says no meanwhile`, m.callBuddy() === 'rest' && near(m.cheerT, C.highFiveRest.medium, 0.02) && near(mk(env, { mode: '2p', difficulty: 'easy' }).cheerRest(), C.highFiveRest.easy, 0.001));
+    let spotTicks = 0;
+    stepUntil(m, (x) => !x.spotting(0), 20, DT, () => spotTicks++);
+    ok(`the spotting lasts ${C.highFiveSpotSeconds} s for both`, near(spotTicks * DT, C.highFiveSpotSeconds) && !m.spotting(1), `${(spotTicks * DT).toFixed(2)} s`);
+    stepUntil(m, (x) => x.cheerT <= 0, 30);
+    ok('after its rest the high five works again', m.phase !== 'observe' || m.callBuddy() === 'ok');
+    // the computer never notices
+    const play = (calls) => {
+      const x = mk(env, { mode: 'cpu', difficulty: 'hard', seed: 88, chars: ['teddy', 'tommy'] });
+      const ans = [];
+      stepUntil(x, (y) => y.phase === 'final', 600, 0.05, (y) => {
+        if (calls && y.phase === 'observe' && Math.random() < 0.02) y.callBuddy();
+        if (y.phase === 'result') { ans.push(`${y.results[y.results.length - 1].answers[1]}@${y.players[1].ans.at}`); y.next(); }
+      });
+      return ans.join();
+    };
+    ok('calling your brother never changes what the computer answers', play(false) === play(true));
+    return out;
+  }
+
+  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy };
   // a check that crashes counts as failed, never as passed
   function runCheck(k, env) {
     try { return CHECKS[k](env); } catch (e) { return [{ name: `${k} crashed: ${e && e.message}`, ok: false, info: String(e && e.stack || e).split('\n')[1] || '' }]; }
@@ -3059,7 +3338,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     const M = SPOT.sim, R = SPOT.RULES, cfg = o.cfg || SPOT.CONFIG;
     const n = o.matches || 60;
     const probs = [];
-    const st = { matches: 0, rounds: 0, zero: 0, unanswered: 0, humanRounds: 0, cpu: {}, seen: {}, minGap: 9, ms: 0, ticks: 0 };
+    const st = { matches: 0, rounds: 0, zero: 0, unanswered: 0, humanRounds: 0, cpu: {}, seen: {}, minGap: 9, ms: 0, ticks: 0, calls: 0, saves: 0 };
     const t0 = Date.now();
     const NEXT = { ready: ['observe'], observe: ['answer'], answer: ['result'], result: ['ready', 'final'] };
     const chars = ['teddy', 'tommy', 'pilot'];
@@ -3075,6 +3354,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         for (const P of m.players) {
           if (!P.human) continue;
           const i = P.i;
+          if (m.phase === 'observe' || m.phase === 'answer') if (rng() < 0.003 && i === 0) { m.callBuddy(); st.calls++; }
           if (m.phase === 'observe') {
             if (rng() < 0.004) m.usePower(i);
             if (m.mode === '2p' && rng() < 0.01) m.adjust(i, rng() < 0.85 ? 1 : -1);
@@ -3109,12 +3389,16 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
               }
             });
             if (r.answers.some((a) => a !== null && !(a >= 0 && a <= 20))) fail(`answer out of range ${r.answers}`);
+            r.saved.forEach((sv, i) => { if (sv) { st.saves++; if (!r.correct[i] || i !== 0 || m.mode !== 'cpu') fail(`a save that wasn't right, or for the wrong player (${i}, ${m.mode})`); } });
           }
           last = m.phase;
         }
         if (m.round < 1 || m.round > R.roundsPerGame) fail(`round ${m.round}`);
         const type = m.roundInfo.type;
         if (m.players.every((P) => P.field.count === 0)) fail('both fields empty');
+        if (m.buddy && m.mode !== 'cpu') fail('a visiting brother in two-player mode');
+        if (m.mode === 'cpu' && m.spotting(1)) fail('the computer got spotting help');
+        if (m.phase !== 'observe' && (m.spotting(0) || m.spotting(1))) fail(`spotting outside the observation (${m.phase})`);
         for (const P of m.players) {
           const f = P.field, mv = cfg.movement[f.type];
           if (f.type !== type || f.animals.length !== f.count || f.count < 0 || f.count > R.maxAnimals) fail(`field ${P.i}: ${f.type} x${f.animals.length} for ${f.count}`);
@@ -3190,6 +3474,14 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     run('a computer that forgets to answer', ['cpu'], withPatch((m) => { m.planCpuAnswer = function (i) { const p = SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); p.at = 9; return p; }; }));
     run('both right gives the round to player 1', ['scoring'], withPatch((m) => { m.score = function (a, c) { const r = M.scoreRound(a, c, this.bothWrong); if (r.why === 'bothRight') r.winner = 0; return r; }; }));
     run('a clicker number that counts without being locked', ['scoring'], withPatch((m) => { const rv = m.reveal; m.reveal = function () { this.players.forEach((P) => { if (!P.ans.locked && P.ans.draft !== null) { P.ans.locked = true; P.ans.value = P.ans.draft; } }); rv.call(this); }; }));
+    run('a brother who saves you even when he isn\'t there', ['buddy'], withPatch((m) => { m.buddyHere = () => true; const cb = m.callBuddy; m.callBuddy = function () { const r = cb.call(this); return r; }; m.buddy = { kind: 'tommy', phase: 'help', t: 0, helloT: 0, treatT: 0, treated: true, left: 1e9, visit: 10, save: true, byeT: 0 }; m.updateBuddy = function () {}; }));
+    run('a brother who never leaves', ['buddy'], withPatch((m) => { const ub = m.updateBuddy; m.updateBuddy = function (dt) { if (this.buddy) this.buddy.left = 99; ub.call(this, dt); }; }));
+    run('a brother who saves every time (no once-per-visit)', ['buddy'], withPatch((m) => { const bs = m.buddySave; m.buddySave = function (i, how) { bs.call(this, i, how); this.buddy.save = true; }; }));
+    run('a brother who answers after the 3 s', ['buddy'], withCfg((c) => { c.companion.shoutBefore = -0.5; }));
+    run('a brother who spots the computer\'s field too', ['buddy'], withPatch((m) => { const sp = m.spotting; m.spotting = function (i) { return sp.call(this, 0) || sp.call(this, i); }; }));
+    run('a high five that only helps player 1', ['buddy'], withPatch((m) => { const hf = m.highFive; m.highFive = function () { const r = hf.call(this); if (r === 'ok') this.players[1].spotT = 0; return r; }; }));
+    run('a high five with no rest', ['buddy'], withPatch((m) => { const hf = m.highFive; m.highFive = function () { const r = hf.call(this); this.cheerT = 0; return r; }; }));
+    run('a brother whose treats use the computer\'s dice', ['buddy'], withPatch((m) => { Object.defineProperty(m, 'rngBuddy', { get() { return this.rngCpu; }, set() {} }); }));
     run('unlocks that count the computer\'s wins', ['unlocks'], Object.assign(base(), { progress: Object.assign({}, M.progress, { record(p, cfg, final, mode) { const won = final.winner !== null; p.games++; if (won) p.wins++; const newly = []; for (const u of cfg.roster.unlocks) if (p.wins >= u.wins && !M.progress.has(p, cfg, u.id)) { p.unlocked.push(u.id); newly.push(u.id); } return { humanWon: won, newly }; } }) }));
     void env0;
     return cases;
@@ -3268,6 +3560,22 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       for (let i = 0; i < n; i++) hiss({ filter: 'lowpass', f: 420, at: i / 9, dur: 0.07, vol: 0.18 * (i < 6 ? (i + 1) / 6 : i > n - 6 ? (n - i) / 6 : 1) });
       tone({ type: 'triangle', f: 330, to: 660, dur: 0.3, vol: 0.06 });
     },
+    // your brother: beep-beep hello, the treat, the save, and the high five's clap
+    hello() {
+      tone({ type: 'square', f: 660, dur: 0.1, vol: 0.06, lp: 2400 });
+      tone({ type: 'square', f: 880, at: 0.14, dur: 0.14, vol: 0.06, lp: 2400 });
+    },
+    treat() { S.coin(3); tone({ type: 'triangle', f: 1568, at: 0.12, dur: 0.2, vol: 0.1 }); },
+    save() {
+      tone({ type: 'triangle', f: 880, dur: 0.1, vol: 0.12 });
+      tone({ type: 'triangle', f: 1320, at: 0.08, dur: 0.25, vol: 0.12 });
+      hiss({ f: 2500, to: 6000, dur: 0.3, vol: 0.08 });
+    },
+    cheer() {
+      hiss({ filter: 'bandpass', f: 1800, dur: 0.08, vol: 0.4, q: 1.2 });
+      [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone({ type: 'triangle', f, at: 0.08 + i * 0.07, dur: 0.14, vol: 0.1 }));
+    },
+    spot() { [988, 1319].forEach((f, i) => tone({ type: 'sine', f, at: i * 0.08, dur: 0.12, vol: 0.06 })); },
     ready() { tone({ type: 'triangle', f: 1175, dur: 0.08, vol: 0.06 }); tone({ type: 'triangle', f: 1568, at: 0.07, dur: 0.1, vol: 0.06 }); },
     nope() { tone({ type: 'square', f: 200, dur: 0.08, vol: 0.05, lp: 1200 }); tone({ type: 'square', f: 160, at: 0.09, dur: 0.1, vol: 0.05, lp: 1200 }); },
     fanfare() {
@@ -3825,6 +4133,71 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     }
   }
 
+  // ---------------------------------------------------------------- the fence window: your brother on the fence
+
+  // A little window in the corner of your binoculars where your brother (the companion) climbs up on the fence: he says hi
+  // with his signature move, looks through his own binoculars to spot for you, and waves goodbye. It has its own small
+  // renderer and scene, so it can sit on top of the binocular frame. With two players both brothers appear for a high five.
+  function makePip(canvas) {
+    const renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.outputEncoding = T.sRGBEncoding;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    const scene = new T.Scene();
+    scene.add(new T.HemisphereLight('#ffffff', '#6a8a4a', 1.0));
+    const sun = new T.DirectionalLight('#fff3e0', 0.9);
+    sun.position.set(-3, 6, 6);
+    scene.add(sun);
+    const camera = new T.PerspectiveCamera(30, 1, 0.1, 60);
+    camera.position.set(0, 1.6, 5.6);
+    camera.lookAt(0, 1.22, 0);
+    const ground = new T.Mesh(new T.PlaneGeometry(30, 30), std('#6cbf45', { roughness: 1 }));
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+    const wood = new T.MeshStandardMaterial({ map: tex.wood, roughness: 0.9 }), post = std('#8e5a2e');
+    for (const x of [-1.6, 0, 1.6]) box(0.16, 0.95, 0.16, post, x, 0.47, 0.7, scene);
+    box(4, 0.16, 0.08, wood, 0, 0.42, 0.72, scene);
+    box(4, 0.16, 0.08, wood, 0, 0.82, 0.72, scene);
+    const stalk = std('#4f9f33'), cob = std('#ffd23f');
+    for (let k = 0; k < 9; k++) {
+      const x = -2.4 + k * 0.6 + srand(-0.1, 0.1), h = srand(1.9, 2.5);
+      box(0.08, h, 0.08, stalk, x, h / 2, -1.4 - (k % 2) * 0.3, scene);
+      box(0.1, 0.26, 0.1, cob, x + 0.07, h * 0.55, -1.35 - (k % 2) * 0.3, scene);
+    }
+    const kids = {};
+    let shown = [];
+    function kidFor(id, slot) {
+      const key = `${id}#${slot}`;
+      if (!kids[key]) { kids[key] = makeKid(id); scene.add(kids[key].root); }
+      return kids[key];
+    }
+    return {
+      canvas,
+      // ids: who is on the fence (one, or two for a high five)
+      show(ids) {
+        for (const k of Object.values(kids)) k.root.visible = false;
+        shown = ids.map((id, s) => {
+          const k = kidFor(id, s);
+          const x = ids.length === 1 ? 0 : (s ? 0.7 : -0.7);
+          k.root.position.set(x, 0, 0);
+          k.root.rotation.y = Math.PI + (ids.length === 1 ? 0 : (s ? 0.3 : -0.3));
+          k.root.visible = true;
+          return k;
+        });
+      },
+      resize(w, h) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); },
+      // modes: one pose per kid ('look' raises the binoculars; anything else is a Kit pose)
+      render(modes, dt, t, hop) {
+        shown.forEach((k, s) => {
+          A_poseKid(k, modes[s] || 'look', dt, t);
+          k.root.position.y = hop ? Math.abs(Math.sin(t * 5 + s)) * 0.25 : 0;
+        });
+        renderer.render(scene, camera);
+      },
+    };
+  }
+  const A_poseKid = (k, mode, dt, t) => poseKid(k, mode, dt, t);
+
   // ---------------------------------------------------------------- little effects: badges, sparkles, confetti
 
   function makeFx(scene) {
@@ -4014,7 +4387,39 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     }
   }
 
-  SPOT.art = { FX, FW, FD, TILT, tex, initTextures, makeWorld, animalMats, makeAnimal, poseAnimal, makeHeli, updateHeli, heliSpot, makeKid, poseKid, makeFx, makeBadge, badgeTexture, paintMask, setLayer };
+  // Your brother's arrows: one on your lens rim for every animal of YOURS hiding outside it, pointing at where it is.
+  // pts: [[px, py], ...] in the view's pixels; o: { w, h, dpr, r, lobe, t }
+  function paintSpots(cv, pts, o) {
+    const W = Math.round(o.w * o.dpr), H = Math.round(o.h * o.dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const x = cv.getContext('2d');
+    x.setTransform(o.dpr, 0, 0, o.dpr, 0, 0);
+    x.clearRect(0, 0, o.w, o.h);
+    if (!pts.length) return;
+    const cx = o.w / 2, cy = o.h / 2, off = o.lobe * o.r, pulse = 1 + Math.sin(o.t * 7) * 0.12;
+    const size = Math.max(9, o.r * 0.09) * pulse;
+    x.lineJoin = 'round';
+    for (const [px, py] of pts) {
+      const c = px < cx ? cx - off : cx + off;
+      let dx = px - c, dy = py - cy;
+      const d = Math.hypot(dx, dy) || 1;
+      dx /= d; dy /= d;
+      const tipX = c + dx * (o.r - 5), tipY = cy + dy * (o.r - 5);
+      const bx = tipX - dx * size * 1.9, by = tipY - dy * size * 1.9;
+      x.beginPath();
+      x.moveTo(tipX, tipY);
+      x.lineTo(bx - dy * size, by + dx * size);
+      x.lineTo(bx + dy * size, by - dx * size);
+      x.closePath();
+      x.fillStyle = '#ffd400';
+      x.strokeStyle = '#14121f';
+      x.lineWidth = 3;
+      x.stroke();
+      x.fill();
+    }
+  }
+
+  SPOT.art = { FX, FW, FD, TILT, tex, initTextures, makeWorld, animalMats, makeAnimal, poseAnimal, makeHeli, updateHeli, heliSpot, makeKid, poseKid, makeFx, makeBadge, badgeTexture, paintMask, paintSpots, makePip, setLayer };
 })();
 
 </script>
@@ -4057,6 +4462,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     pilot: `Helicopter pilot. At night his helicopter lights up his binoculars for ${C.characters.pilot.durationSeconds} s. Then ${C.characters.pilot.cooldownSeconds} s to recharge. Night only.`,
   }[id]);
   const PCOL = ['#9fd0ff', '#9ff2d6'];
+  const nameOf = (kind) => (Kit.roster.get(kind) || { name: String(kind).toUpperCase() }).name;
+  const buddyFor = (id) => Kit.roster.buddyFor(id);
 
   // ---------------------------------------------------------------- storage
 
@@ -4123,9 +4530,11 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     match: null, demo: null, view: null,
     lensOpen: [0, 0], lensTarget: [0, 0], litK: [0, 0], frostK: [0, 0], tint: [-1, -1], revealK: 0,
     reveal: null, banner: null, ambientT: 3, final: null, finalNew: [], sparkT: 0,
+    pip: { until: 0, born: 0, ids: [], modes: [], hop: false }, treatFly: null, shouted: false, spotOn: [false, false],
   };
   let rects = [{ x: 0, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 100, h: 100 }];
   let upp = 0.03, portrait = false, short = false;
+  let pipRect = { x: 0, y: 0, w: 150, h: 168 };
   const cur = () => (st.mode === 'match' || st.mode === 'pause' ? st.match : st.demo);
 
   // ---------------------------------------------------------------- the animals' views (pooled per field and type)
@@ -4269,6 +4678,61 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     }
   }
 
+  // ---------------------------------------------------------------- your brother: the fence window and the arrows
+
+  const pip = A.makePip($('pip'));
+  const spots = [$('spot0'), $('spot1')];
+  function showPip(ids, modes, dur, hop) {
+    st.pip = { until: st.time + dur, born: st.time, ids, modes, hop: !!hop };
+    pip.show(ids);
+  }
+  function updatePip(dt) {
+    const el = $('pip'), tag = $('pipTag'), P = st.pip;
+    const on = st.mode === 'match' && st.time < P.until;
+    setCls(el, 'hidden', !on);
+    setCls(tag, 'hidden', !on);
+    if (!on) return;
+    const age = st.time - P.born, left = P.until - st.time;
+    const k = Math.min(1, age / 0.2, left / 0.2);
+    el.style.transform = `scale(${(0.4 + 0.6 * smooth(clamp(k, 0, 1))).toFixed(3)})`;
+    el.style.opacity = String(clamp(k * 1.5, 0, 1));
+    setCls(el, 'night', !!(st.view && st.view.sky === 'night'));
+    pip.render(P.modes, dt, st.time, P.hop);
+    tag.textContent = P.ids.length === 1 ? nameOf(P.ids[0]) : '✋ HIGH FIVE!';
+    tag.style.left = `${pipRect.x + pipRect.w / 2}px`;
+    tag.style.top = `${pipRect.y - 12}px`;
+    tag.style.transform = 'translateX(-50%)';
+  }
+  // the treat arcs from his window into your card
+  function flyTreat(emoji) {
+    const c = $('card0').querySelector('.face').getBoundingClientRect();
+    st.treatFly = { born: st.time, dur: 0.9, emoji, from: { x: pipRect.x + pipRect.w / 2, y: pipRect.y + pipRect.h * 0.45 }, to: { x: c.left + c.width / 2, y: c.top + c.height / 2 } };
+  }
+  function updateTreatFly() {
+    const el = $('treatFly'), T0 = st.treatFly;
+    if (!T0 || st.mode !== 'match') { el.classList.add('hidden'); return; }
+    const k = (st.time - T0.born) / T0.dur;
+    if (k >= 1) { el.classList.add('hidden'); st.treatFly = null; return; }
+    el.classList.remove('hidden');
+    el.textContent = T0.emoji;
+    const x = T0.from.x + (T0.to.x - T0.from.x) * k, y = T0.from.y + (T0.to.y - T0.from.y) * k - Math.sin(k * Math.PI) * 90;
+    el.style.left = `${x - 17}px`;
+    el.style.top = `${y - 17}px`;
+    el.style.transform = `rotate(${k * 540}deg) scale(${1 + Math.sin(k * Math.PI) * 0.4})`;
+  }
+  // arrows on your rim for your own hiding animals (your brother spotting, or a high five)
+  function updateSpots() {
+    const S = st.match, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (let i = 0; i < 2; i++) {
+      const on = !!(S && st.mode === 'match' && S.spotting(i));
+      if (!on && !st.spotOn[i]) continue;
+      st.spotOn[i] = on;
+      const r = rects[i];
+      const pts = on ? S.spotted(i).map((a) => { const q = M.toLens(C, a.x, a.z, 0.4); return [r.w / 2 + q.sx / upp, r.h / 2 - q.sy / upp]; }) : [];
+      A.paintSpots(spots[i], pts, { w: r.w, h: r.h, dpr, r: S ? S.lensFor(i) / upp : 1, lobe: C.lens.lobe, t: st.time });
+    }
+  }
+
   // ---------------------------------------------------------------- toasts and the banner (run on the game clock)
 
   const ptoasts = [[], []];
@@ -4379,8 +4843,42 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     for (let i = 0; i < 2; i++) {
       const r = rects[i];
       place(masks[i], r.x, r.y, r.w, r.h);
+      place(spots[i], r.x, r.y, r.w, r.h);
       place($('pui' + i), r.x, r.y, r.w, r.h);
     }
+    // your brother's button, bar and fence window: VS Computer in the corner of your binoculars, the high five on the fence
+    const bud = $('budBtn'), bar = $('budBar');
+    const budS = short ? 64 : 92, powS = short ? 64 : 92;
+    const two = S ? S.mode === '2p' : settings.mode === '2p';
+    const r0 = rects[0];
+    bar.classList.toggle('hidden', two || portrait || short || !S);
+    if (!two) {
+      const pw = short ? 96 : 150, ph = short ? 108 : 168;
+      if (!portrait) {
+        place(bud, r0.x + r0.w - budS - 14, r0.y + r0.h - budS - (short ? 12 : 22));
+        pipRect = { x: r0.x + 10, y: r0.y + r0.h - ph - 10, w: pw, h: ph };
+      } else {
+        const hasPow = !!(S && S.players[0].power.kind);
+        place(bud, r0.x + r0.w - 10 - budS - (hasPow ? powS + 14 : 0), r0.y + r0.h - budS - 14);
+        pipRect = { x: r0.x + r0.w - pw - 8, y: r0.y + 8, w: pw, h: ph };
+      }
+      const c0r = c0.getBoundingClientRect();
+      place(bar, c0r.right + 8, c0r.top + Math.max(0, (c0r.height - 46) / 2));
+    } else {
+      const pw = short ? 120 : 190, ph = short ? 90 : 140;
+      if (!portrait) {
+        const fxm = rects[0].x + rects[0].w + (rects[1].x - rects[0].x - rects[0].w) / 2, by = r0.y + r0.h - budS - (short ? 12 : 22);
+        place(bud, fxm - budS / 2, by);
+        pipRect = { x: fxm - pw / 2, y: by - ph - 22, w: pw, h: ph };
+      } else {
+        const fy = rects[1].y - (rects[1].y - r0.y - r0.h) / 2;
+        place(bud, w / 2 - budS / 2, fy - budS / 2);
+        // centred on the fence, so it covers both views the same (it sits over the button while it rests anyway)
+        pipRect = { x: w / 2 - pw / 2, y: fy - ph / 2, w: pw, h: ph };
+      }
+    }
+    place($('pip'), pipRect.x, pipRect.y, pipRect.w, pipRect.h);
+    pip.resize(pipRect.w, pipRect.h);
     renderer.setSize(w, h, false);
     titleCam.aspect = w / h;
     titleCam.updateProjectionMatrix();
@@ -4440,6 +4938,21 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       const clk = $('clk' + i);
       clk.classList.toggle('hidden', S.mode !== '2p');
     });
+    // your brother's button: his face (VS Computer) or both players' faces for the high five
+    const bud = $('budBtn'), imgs = bud.querySelectorAll('.pics img');
+    bud.classList.toggle('hidden', S.mode === 'demo');
+    bud.classList.toggle('two', S.mode === '2p');
+    if (S.mode === '2p') {
+      imgs[0].src = faceOf(S.players[0].char); imgs[1].src = faceOf(S.players[1].char); imgs[1].classList.remove('hidden');
+      bud.querySelector('small').textContent = 'HIGH FIVE';
+      bud.querySelector('.sv').classList.add('hidden');
+    } else {
+      const kind = buddyFor(S.lookOf(S.players[0].char));
+      imgs[0].src = faces[kind]; imgs[1].classList.add('hidden');
+      bud.querySelector('small').textContent = `CALL ${nameOf(kind)}`;
+      bud.querySelector('.sv').classList.remove('hidden');
+      $('budBar').querySelector('img').src = faces[kind];
+    }
     $('resH0').textContent = S.mode === 'cpu' ? 'YOU' : 'PLAYER 1';
     $('resH1').textContent = S.mode === 'cpu' ? 'COMPUTER' : 'PLAYER 2';
   }
@@ -4463,6 +4976,23 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     const an = ANIMAL[v.animal];
     setHtml($('roundInfo'), `${v.sky === 'night' ? '🌙 NIGHT' : '☀️ DAY'} · ${an.emoji} ${an.many} · ${DIFF[v.difficulty]}`);
     const revealDone = st.reveal && st.reveal.stamped;
+    // your brother's button and bar: the ring shows his time left (VS Computer) or the high five's rest (two players)
+    const bud = $('budBtn');
+    if (S.mode === 'cpu') {
+      const B = v.buddy;
+      bud.style.setProperty('--fill', B ? (B.left / B.visit).toFixed(3) : '1');
+      setCls(bud, 'on', !!(B && B.here));
+      setCls(bud, 'rest', false);
+      setCls(bud.querySelector('.sv'), 'used', !!(B && B.here && !B.save));
+      const bar = $('budBar');
+      setCls(bar, 'hidden', !B || !B.here || portrait || short);
+      if (B) { bar.querySelector('i').style.setProperty('--fill', (B.left / B.visit).toFixed(3)); setCls(bar.querySelector('em'), 'used', !B.save); }
+    } else if (v.cheer) {
+      const c = v.cheer;
+      bud.style.setProperty('--fill', c.rest > 0 ? (1 - c.rest / c.restMax).toFixed(3) : '1');
+      setCls(bud, 'rest', !c.ready);
+      setCls(bud, 'on', S.players.some((P) => P.spotT > 0));
+    }
     S.players.forEach((P, i) => {
       const p = v.players[i], card = $('card' + i);
       // a dot per round: yellow = won, grey = draw
@@ -4513,7 +5043,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         if (S.mode === 'cpu' && p.human) grids[i].forEach((b, n) => setCls(b, 'sel', p.entry === n));
         let hint;
         if (!p.human) hint = p.locked ? 'the computer has answered' : 'the computer is thinking';
-        else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : 'locked in!';
+        else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : st.shouted ? `🛡️ ${nameOf(v.buddy ? v.buddy.kind : 'tommy')} ANSWERED FOR YOU!` : 'locked in!';
         else if (isTouch) hint = 'tap your number';
         else if (S.mode === '2p') hint = i ? '↑ ↓ to fix your count · → or Enter to lock' : 'W S to fix your count · D or Space to lock';
         else hint = 'type the number, or click it';
@@ -4524,7 +5054,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       const stampOn = v.phase === 'result' && revealDone;
       setCls(stamp, 'hidden', !stampOn);
       if (stampOn) {
-        const said = p.answer === null ? 'NO ANSWER' : `SAID <b>${p.answer}</b>`;
+        const bk = S.mode === 'cpu' ? nameOf(v.buddy ? v.buddy.kind : buddyFor(S.lookOf(P.char))) : '';
+        const said = p.saved ? `<span>🛡️ ${bk} SAVED YOU!</span>` : p.answer === null ? 'NO ANSWER' : `SAID <b>${p.answer}</b>`;
         setHtml(stamp, `<span class="big2">${p.correct ? '✅' : '❌'}</span><span class="tx">THERE WERE <b>${p.count}</b> ${an.emoji}<br>${said}</span>`);
         stamp.className = 'stamp ' + (p.correct ? 'right' : 'wrong');
       }
@@ -4542,8 +5073,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       setHtml($('verdict'), verdict);
       for (let i = 0; i < 2; i++) {
         setHtml($('resC' + i), String(r.counts[i]));
-        setHtml($('resA' + i), r.answers[i] === null ? '—' : String(r.answers[i]));
-        setHtml($('resR' + i), r.correct[i] ? '✅ Correct' : r.answers[i] === null ? '⏰ No answer' : '❌ Incorrect');
+        setHtml($('resA' + i), r.saved[i] ? `${r.yours[i] === null ? '—' : r.yours[i]} → ${r.answers[i]} 🛡️` : r.answers[i] === null ? '—' : String(r.answers[i]));
+        setHtml($('resR' + i), r.saved[i] ? '🛡️ Saved!' : r.correct[i] ? '✅ Correct' : r.answers[i] === null ? '⏰ No answer' : '❌ Incorrect');
       }
       setHtml($('resScore'), `SCORE ${v.scores[0]} – ${v.scores[1]} · ROUND ${v.round} OF ${v.rounds}`);
       setHtml($('nextBtn'), v.round >= v.rounds ? 'FINAL SCORE ▶' : 'NEXT ROUND ▶');
@@ -4605,6 +5136,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       case 'round': {
         st.lensTarget = [0, 0];
         st.reveal = null;
+        st.shouted = false;
         hideBadges();
         clearToasts();
         const an = ANIMAL[e.animal];
@@ -4641,6 +5173,39 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       case 'lock': SFX.lock(); break;
       case 'reveal': startReveal(S); break;
       case 'matchEnd': showFinal(e); break;
+      // your brother
+      case 'buddyHello': {
+        SFX.hello();
+        showPip([e.who], [Kit.roster.signature(Kit.roster.get(e.who), 'hello')], C.companion.helloSeconds + C.companion.treatFlySeconds + 0.5, true);
+        if (S.phase === 'observe') { ptoast(0, `👀 ${nameOf(e.who)} IS SPOTTING!`, 'sun', 1.8); SFX.spot(); }
+        break;
+      }
+      case 'treat':
+        st.pip.modes = ['wave'];
+        st.pendingTreat = e;
+        flyTreat(e.emoji);
+        break;
+      case 'treatGot':
+        if (st.pendingTreat) { ptoast(0, `${st.pendingTreat.emoji} ${st.pendingTreat.name} FROM ${nameOf(e.who)}!`, 'sun', 2.2); SFX.treat(); st.pendingTreat = null; }
+        st.pip.modes = ['look'];
+        break;
+      case 'buddyBye': showPip([e.who], [Kit.roster.signature(Kit.roster.get(e.who), 'goodbye')], C.companion.byeSeconds, true); break;
+      case 'buddySave':
+        if (e.how === 'answer') st.shouted = true;
+        ptoast(0, `${nameOf(e.who)} SAVED YOU!`, 'save', 2.2);
+        SFX.save();
+        showPip([e.who], [Kit.roster.signature(Kit.roster.get(e.who), 'hello')], 1.8, true);
+        break;
+      case 'highFive': {
+        const looks = S.players.map((P) => CHAR[P.char].look);
+        showPip(looks, looks.map((id) => Kit.roster.signature(Kit.roster.get(id), 'hello')), 2.3, true);
+        SFX.cheer();
+        SFX.spot();
+        // each gets a treat from the other one, and both spot their own hiding animals
+        e.treats.forEach((t, i) => { ptoast(i, `${t.emoji} ${t.name} FROM ${CHAR[S.players[1 - i].char].name}!`, 'sun', 2.2); ptoast(i, '👀 SPOT THE HIDING ONES!', '', 1.8); });
+        break;
+      }
+      case 'cheerNo': nudge($('budBtn')); SFX.nope(); break;
     }
   }
 
@@ -4668,6 +5233,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     const S = st.match;
     if (st.mode === 'match' && S) {
       if (c === 'KeyP' || c === 'Escape') { pause(); return; }
+      if (c === 'KeyT') { e.preventDefault(); if (!e.repeat) callBuddy(); return; }
       if (S.phase === 'result' || S.phase === 'final') {
         if (c === 'Enter' || c === 'Space' || c === 'KeyN' || c === 'NumpadEnter') { e.preventDefault(); next(); }
         return;
@@ -4731,6 +5297,21 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     });
   });
   $('nextBtn').addEventListener('click', next);
+  // your brother: VS Computer calls him (as often as you like), two players high-five
+  function callBuddy() {
+    const S = st.match;
+    if (!S || st.mode !== 'match') return;
+    S.callBuddy();
+  }
+  $('budBtn').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    firstGesture();
+    const el = $('budBtn');
+    el.classList.add('down');
+    setTimeout(() => el.classList.remove('down'), 120);
+    callBuddy();
+  });
 
   function toggleMute() {
     Kit.sound.init();
@@ -4767,7 +5348,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     const chars = o.chars || settings.chars;
     st.match = new M.Match({
       mode: o.mode || settings.mode, difficulty: o.difficulty || settings.difficulty, sky: o.sky || settings.sky,
-      chars, seed: o.seed, bothWrong: o.bothWrong || settings.bothWrong, cfg: o.cfg,
+      chars, seed: o.seed, bothWrong: o.bothWrong || settings.bothWrong, cfg: o.cfg, buddyFor,
     });
     st.demo = null;
     st.final = null;
@@ -4778,6 +5359,10 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     st.litK = [0, 0];
     st.frostK = [0, 0];
     st.revealK = 0;
+    st.pip.until = 0;
+    st.treatFly = null;
+    st.shouted = false;
+    st.pendingTreat = null;
     fx.clear();
     hideBadges();
     clearToasts();
@@ -4909,9 +5494,13 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     else { title = 'WINNER!'; sub = `${S.mode === 'cpu' ? 'YOU' : `${names[f.winner]} (${chars[f.winner].name})`} · ${f.scores[0]} – ${f.scores[1]}`; }
     $('finalTitle').textContent = title;
     $('finalSub').textContent = sub;
+    const nSaves = f.results.filter((r) => r.saved[0]).length;
+    const fs = $('finalSaves');
+    fs.classList.toggle('hidden', !(S.mode === 'cpu' && nSaves));
+    if (S.mode === 'cpu' && nSaves) fs.textContent = `🛡️ ${nameOf(buddyFor(S.lookOf(S.players[0].char)))} SAVED YOU ${nSaves} TIME${nSaves === 1 ? '' : 'S'}!`;
     const rows = [`<span></span><span class="h p0">${names[0]}</span><span class="h p1">${names[1]}</span>`];
     f.results.forEach((r, k) => {
-      const cell = (i) => `${r.correct[i] ? '✅' : '❌'} ${r.answers[i] === null ? '—' : r.answers[i]} / ${r.counts[i]}`;
+      const cell = (i) => `${r.saved[i] ? '🛡️' : r.correct[i] ? '✅' : '❌'} ${r.answers[i] === null ? '—' : r.answers[i]} / ${r.counts[i]}`;
       rows.push(`<span>${k + 1}. ${ANIMAL[r.animal].emoji}${r.sky === 'night' ? '🌙' : ''}</span><span>${cell(0)}</span><span>${cell(1)}</span>`);
     });
     rows.push(`<span class="h">TOTAL</span><span class="tot">${f.scores[0]}</span><span class="tot">${f.scores[1]}</span>`);
@@ -5036,6 +5625,9 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     }
     fx.update(dt);
     if (st.mode === 'match' || st.mode === 'pause') updateHud();
+    updatePip(dt);
+    updateTreatFly();
+    updateSpots();
     updateToasts();
     updateBanner();
     paintMasks();
@@ -5117,13 +5709,15 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         screen: st.mode, phase: v && v.phase, round: v && v.round, sky: v && v.sky, animal: v && v.animal,
         timeLeft: v && +v.timeLeft.toFixed(2), scores: v && v.scores,
         players: v && v.players.map((p, i) => ({ char: p.char, human: p.human, lens: +p.lens.toFixed(2), frozen: p.frozen, lit: p.lit, locked: p.locked, entry: p.entry, answer: p.answer, count: p.count, power: { kind: p.power.kind, active: p.power.active, cool: +p.power.coolLeft.toFixed(1), ready: p.power.ready }, visible: S.visibleCount(i) })),
-        result: v && v.result, final: v && v.final, progress: prog,
+        result: v && v.result, final: v && v.final, progress: prog, buddy: v && v.buddy, cheer: v && v.cheer,
+        spotted: S ? [0, 1].map((i) => S.spotted(i).length) : null,
       };
     },
     // the real counts, for tests only (the screen never shows them before the reveal)
     counts() { const S = st.match; return S ? S.players.map((P) => P.field.count) : null; },
     sim: () => st.match,
     power(i = 0) { const S = st.match; return S && S.usePower(i); },
+    buddy() { const S = st.match; return S && S.callBuddy(); },
     pick(i, n) { return st.match && st.match.pick(i, n); },
     type(i, d) { return st.match && st.match.typeDigit(i, d); },
     adjust(i, d) { return st.match && st.match.adjust(i, d); },
@@ -5157,10 +5751,11 @@ Kit.help.setup({
     ['use your power ❄️ freeze · 🚁 spotlight', 'A or Space', '← or Enter'],
     ['lock your answer (you have 3 s!)', 'D or Space', '→ or Enter'],
     ['VS Computer: type the number', '0 – 9 · Backspace', ''],
+    ['call your brother · high five', 'T', ''],
     ['next round · pause · sound', 'Enter · P or Esc · M', ''],
   ],
-  note: 'Two players: your count is hidden (it shows ●● whatever the number), so the other player can\'t read it. VS Computer: type the number and it locks by itself (1 and 2 wait a moment for a second digit).',
-  touch: 'Tap your power button while you count. When the binoculars shut, tap your number from 0 to 20: that locks it. Two players on an iPad: each taps on their own side.',
+  note: 'Two players: your count is hidden (it shows ●● whatever the number), so the other player can\'t read it. VS Computer: type the number and it locks by itself (1 and 2 wait a moment for a second digit). Call your brother as often as you like: he spots your hiding animals and has your back once.',
+  touch: 'Tap your power button while you count. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother\'s face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.',
 });
 
 </script>
@@ -5207,7 +5802,7 @@ Kit.help.setup({
     "Ideas Teddy hasn't decided yet": 'Teddy 还没决定的点子',
     // playing
     'TIME': '时间', 'GET READY': '准备', 'ANSWER!': '回答！', 'COUNT': '数完了', 'TIME LEFT': '还剩',
-    '🔭 BIG BINOCULARS · always on': '🔭 大望远镜 · 一直有效', 'lock': '锁定',
+    '🔭 BIG BINOCULARS': '🔭 大望远镜', '· always on': '· 一直有效', 'lock': '锁定',
     'READY': '好了', 'ON!': '开着！', '🌙 NIGHT ONLY': '🌙 只能晚上用',
     '✓ LOCKED': '✓ 锁定了', 'the computer has answered': '电脑已经答了', 'the computer is thinking': '电脑在想',
     'hidden until both are in': '两个人都答完才揭晓', 'locked in!': '锁定了！', 'tap your number': '点你的数字',
@@ -5222,6 +5817,15 @@ Kit.help.setup({
     '❄️ FREEZE!': '❄️ 冻住！', '🚁 SPOTLIGHT!': '🚁 探照灯！', '🔭 ALWAYS ON!': '🔭 一直有效！', 'TYPE A NUMBER FIRST': '先输入一个数字',
     'FENCE': '栅栏', 'THERE WERE': '一共有', 'SAID': '答了',
     'Difficulty': '难度', 'Day or night': '白天还是夜晚', 'When both are wrong': '两个人都答错时',
+    // your brother (the companion) and the high five
+    'HIGH FIVE': '击掌', '✋ HIGH FIVE!': '✋ 击掌！', '👀 SPOT THE HIDING ONES!': '👀 找找藏起来的！', '🛡️ Saved!': '🛡️ 救回来了！',
+    'he has your back once': '他会帮你一次',
+    '👋 VS COMPUTER: call your brother any time with T or his face! Two players: T is a HIGH FIVE.': '👋 对战电脑：随时按 T 或点他的脸叫兄弟来帮忙！双人：T 是击掌。',
+    'call your brother · high five': '叫兄弟 · 击掌',
+    "Two players: your count is hidden (it shows ●● whatever the number), so the other player can't read it. VS Computer: type the number and it locks by itself (1 and 2 wait a moment for a second digit). Call your brother as often as you like: he spots your hiding animals and has your back once.":
+      '双人：你的数字是藏起来的（不管多少都显示 ●●），对方看不到。对战电脑：输入数字会自动锁定（1 和 2 会等一下第二位数字）。兄弟随时可以叫：他帮你找藏起来的动物，还会救你一次。',
+    "Tap your power button while you count. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother's face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.":
+      '数的时候点你的本领按钮。望远镜关上以后，点 0 到 20 里你的数字，就锁定了。点兄弟的脸叫他来（双人：栅栏上的击掌按钮）。两个人用 iPad：各点自己那一边。',
     // the ? panel (js/keys.js)
     'Player 1 (left)': '玩家 1（左边）', 'Player 2 (right)': '玩家 2（右边）',
     'count +1 · −1 (your hidden clicker)': '计数 +1 · −1（藏起来的计数器）',
@@ -5229,10 +5833,6 @@ Kit.help.setup({
     'lock your answer (you have 3 s!)': '锁定答案（只有 3 秒！）',
     'VS Computer: type the number': '对战电脑：输入数字',
     'next round · pause · sound': '下一轮 · 暂停 · 声音',
-    "Two players: your count is hidden (it shows ●● whatever the number), so the other player can't read it. VS Computer: type the number and it locks by itself (1 and 2 wait a moment for a second digit).":
-      '双人：你的数字是藏起来的（不管多少都显示 ●●），对方看不到。对战电脑：输入数字会自动锁定（1 和 2 会等一下第二位数字）。',
-    'Tap your power button while you count. When the binoculars shut, tap your number from 0 to 20: that locks it. Two players on an iPad: each taps on their own side.':
-      '数的时候点你的本领按钮。望远镜关上以后，点 0 到 20 里你的数字，就锁定了。两个人用 iPad：各点自己那一边。',
   });
 
   L.rule(/^ROUND (\d+) OF (\d+)$/, '第 $1 轮（共 $2 轮）');
@@ -5257,6 +5857,14 @@ Kit.help.setup({
   L.rule(/^YOU · (\d+) – (\d+)$/, '你 · $1 – $2');
   L.rule(/^(PLAYER [12]) \((\S+)\) · (\d+) – (\d+)$/, (m, w, n, a, b) => `${WHO[w]}（${n}）· ${a} – ${b}`);
   L.rule(/^(\d+)\. $/, '$1. ');
+  const TREAT = { 'ICE CREAM': '冰淇淋', WATER: '水', JUICE: '果汁', COOKIE: '饼干', WATERMELON: '西瓜', BANANA: '香蕉' };
+  L.rule(/^(\S+) (ICE CREAM|WATER|JUICE|COOKIE|WATERMELON|BANANA) FROM (\S+)!$/, (m, e, t, who) => `${e} ${who} 送来的${TREAT[t]}！`);
+  L.rule(/^CALL (\S+)$/, '叫 $1');
+  L.rule(/^(\S+) SAVED YOU!$/, '$1 救了你！');
+  L.rule(/^🛡️ (\S+) SAVED YOU!$/, '🛡️ $1 救了你！');
+  L.rule(/^🛡️ (\S+) ANSWERED FOR YOU!$/, '🛡️ $1 帮你答了！');
+  L.rule(/^👀 (\S+) IS SPOTTING!$/, '👀 $1 在帮你找！');
+  L.rule(/^🛡️ (\S+) SAVED YOU (\d+) TIMES?!$/, '🛡️ $1 救了你 $2 次！');
 })();
 
 </script>

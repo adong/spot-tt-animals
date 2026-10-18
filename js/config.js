@@ -91,6 +91,22 @@
       powerWait: [1.5, 6], // seconds it waits after its power is ready before using it
     },
 
+    // ALAN'S SERIES FEATURE (in every family game, not in Teddy's document): call your brother.
+    // VS Computer: T (or his face) brings the other brother. He says hi, tosses a treat, and for his visit he spots
+    // the animals hiding outside YOUR lenses (arrows on your rim). Once per visit he has your back: a wrong answer, or
+    // none with shoutBefore seconds left, becomes the right number ("TOMMY SAVED YOU!"). He never helps the computer.
+    // Two players: T is a HIGH FIVE that lets BOTH players spot their own hiding animals for a while, then rests.
+    companion: {
+      visitSeconds: 10,
+      helloSeconds: 1.6,
+      treatFlySeconds: 0.9,
+      byeSeconds: 1.2,
+      saves: true,
+      shoutBefore: 0.6, // he answers for you inside the 3 s, so Teddy's 3-second rule still holds
+      highFiveSpotSeconds: 5,
+      highFiveRest: { easy: 12, medium: 20, hard: 20 },
+    },
+
     // PROPOSAL: on 'mix' nights and days are picked at random each round (both players share one).
     sky: { mixNightChance: 0.5 },
 

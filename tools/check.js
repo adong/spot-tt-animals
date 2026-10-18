@@ -52,6 +52,7 @@ if (has('--soak') || has('--soak-only')) {
   const { probs, stats: st } = SPOT.check.soak(o);
   console.log(`soak: ${st.matches} of ${o.matches} matches finished, ${st.rounds} rounds, ${st.ticks} ticks (${(st.ms / 1000).toFixed(1)} s)`);
   console.log(`  zero rounds ${st.zero} (${((st.zero / Math.max(1, st.rounds)) * 100).toFixed(1)}%), bot rounds unanswered ${st.unanswered}/${st.humanRounds}, closest two animals ${st.minGap.toFixed(2)} x their room`);
+  console.log(`  brother called ${st.calls} times, ${st.saves} saves`);
   for (const [d, c] of Object.entries(st.cpu)) console.log(`  computer on ${d}: right ${c.right}/${c.n} (${((c.right / c.n) * 100).toFixed(0)}%)`);
   for (const [ch, s] of Object.entries(st.seen)) console.log(`  ${ch.padEnd(6)} sees ${((s.v / s.n) * 100).toFixed(0)}% of their animals at a time`);
   for (const p of probs) console.log(`  PROBLEM ${p}`);

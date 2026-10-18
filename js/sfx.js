@@ -66,6 +66,22 @@
       for (let i = 0; i < n; i++) hiss({ filter: 'lowpass', f: 420, at: i / 9, dur: 0.07, vol: 0.18 * (i < 6 ? (i + 1) / 6 : i > n - 6 ? (n - i) / 6 : 1) });
       tone({ type: 'triangle', f: 330, to: 660, dur: 0.3, vol: 0.06 });
     },
+    // your brother: beep-beep hello, the treat, the save, and the high five's clap
+    hello() {
+      tone({ type: 'square', f: 660, dur: 0.1, vol: 0.06, lp: 2400 });
+      tone({ type: 'square', f: 880, at: 0.14, dur: 0.14, vol: 0.06, lp: 2400 });
+    },
+    treat() { S.coin(3); tone({ type: 'triangle', f: 1568, at: 0.12, dur: 0.2, vol: 0.1 }); },
+    save() {
+      tone({ type: 'triangle', f: 880, dur: 0.1, vol: 0.12 });
+      tone({ type: 'triangle', f: 1320, at: 0.08, dur: 0.25, vol: 0.12 });
+      hiss({ f: 2500, to: 6000, dur: 0.3, vol: 0.08 });
+    },
+    cheer() {
+      hiss({ filter: 'bandpass', f: 1800, dur: 0.08, vol: 0.4, q: 1.2 });
+      [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone({ type: 'triangle', f, at: 0.08 + i * 0.07, dur: 0.14, vol: 0.1 }));
+    },
+    spot() { [988, 1319].forEach((f, i) => tone({ type: 'sine', f, at: i * 0.08, dur: 0.12, vol: 0.06 })); },
     ready() { tone({ type: 'triangle', f: 1175, dur: 0.08, vol: 0.06 }); tone({ type: 'triangle', f: 1568, at: 0.07, dur: 0.1, vol: 0.06 }); },
     nope() { tone({ type: 'square', f: 200, dur: 0.08, vol: 0.05, lp: 1200 }); tone({ type: 'square', f: 160, at: 0.09, dur: 0.1, vol: 0.05, lp: 1200 }); },
     fanfare() {

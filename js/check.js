@@ -494,7 +494,115 @@
     return out;
   }
 
-  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies };
+  // ---------------------------------------------------------------- 14. your brother (Alan's series feature)
+
+  function buddy(env) {
+    const out = [], C = env.cfg.companion, R = SPOT.RULES;
+    const ok = (name, cond, info) => out.push({ name, ok: !!cond, info: info || '' });
+    const toAnswer = (m) => stepUntil(m, (x) => x.phase === 'answer');
+    // who comes
+    const who = ['teddy', 'tommy', 'pilot'].map((c) => { const m = mk(env, { mode: 'cpu', chars: [c, 'teddy'] }); m.callBuddy(); return m.buddy && m.buddy.kind; });
+    ok('VS Computer: T brings the other brother (Tommy for Teddy, Teddy for Tommy, Tommy for the pilot)', who.join() === 'tommy,teddy,tommy', who.join());
+    // hello, treat, visit, goodbye
+    let m = mk(env, { mode: 'cpu', seed: 81, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    drain(m);
+    m.callBuddy();
+    const ev1 = [];
+    stepUntil(m, (x) => !x.buddy, 30, DT, (x) => { for (const e of drain(x)) ev1.push([e.type, x.buddy ? x.buddy.t : 99]); });
+    const types = ev1.map((e) => e[0]);
+    const byeAt = (ev1.find((e) => e[0] === 'buddyBye') || [0, 0])[1];
+    ok('he says hi, tosses a treat that lands, stays his visit, then says bye and goes', ['buddyHello', 'treat', 'treatGot', 'buddyBye', 'buddyOut'].every((t) => types.includes(t)) && types.indexOf('treat') < types.indexOf('treatGot') && near(byeAt, C.visitSeconds, 0.05), `${types.filter((t) => /buddy|treat/.test(t)).join(' ')}; bye after ${byeAt.toFixed(2)} s`);
+    // call again: hello, treat and the whole visit again, never two
+    m = mk(env, { mode: 'cpu', seed: 82, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    m.callBuddy();
+    stepUntil(m, (x) => x.buddy && x.buddy.treated, 5);
+    stepUntil(m, (x) => x.buddy.left < 4, 10);
+    m.buddy.save = false;
+    drain(m);
+    const again = m.callBuddy();
+    const ev2 = []; stepUntil(m, (x) => x.buddy.treated, 5, DT, (x) => { for (const e of drain(x)) ev2.push(e.type); });
+    ok('calling again (no cooldown): another hello and treat, the whole visit again, the save re-armed', again === 'again' && ev2.includes('buddyHello') && ev2.includes('treatGot') && m.buddy.left > C.visitSeconds - 3 && m.buddy.save);
+    m.callBuddy(); m.callBuddy(); m.callBuddy();
+    ok('quick calls never bring two brothers', !!m.buddy && m.stats.calls >= 5);
+    // spotting: your own hiding animals, never the computer's
+    m = mk(env, { mode: 'cpu', seed: 83, difficulty: 'medium', chars: ['tommy', 'tommy'], tweakCounts: () => [20, 20] });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    const before = m.spotted(0).length;
+    m.callBuddy();
+    m.step(DT);
+    const sp = m.spotted(0), hidden = 20 - m.visibleCount(0), v = m.view();
+    ok('while he\'s there he spots your hiding animals (only yours: never the computer\'s)', before === 0 && sp.length === hidden && hidden > 0 && sp.every((a) => m.players[0].field.animals.includes(a)) && !m.spotting(1) && m.spotted(1).length === 0 && v.players[0].spotting && !v.players[1].spotting, `${sp.length} hiding, computer spotted ${m.spotted(1).length}`);
+    // the save
+    const saveRound = (how, call = true) => {
+      const x = mk(env, { mode: 'cpu', seed: 84, difficulty: 'hard' });
+      stepUntil(x, (y) => y.phase === 'observe' && y.observeT - y.phaseT < 4);
+      if (call) x.callBuddy();
+      toAnswer(x);
+      const c = x.players[0].field.count;
+      if (how === 'wrong') { stepUntil(x, (y) => y.phaseT > 0.4); x.pick(0, wrongFor(c)); }
+      if (how === 'right') { stepUntil(x, (y) => y.phaseT > 0.4); x.pick(0, c); }
+      const evs = [];
+      stepUntil(x, (y) => y.phase === 'result', 4, DT, (y) => { for (const e of drain(y)) evs.push(e); });
+      return { x, r: x.results[0], c, evs, at: x.players[0].ans.at };
+    };
+    let t = saveRound('wrong');
+    ok('he has your back: a wrong answer while he\'s there becomes right ("TOMMY SAVED YOU!")', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === wrongFor(t.c) && t.r.answers[0] === t.c && t.evs.some((e) => e.type === 'buddySave' && !('value' in e)));
+    t = saveRound('none');
+    ok('no answer with a moment left: he shouts the number for you, inside the 3 s', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === null && t.at <= R.answerSeconds - C.shoutBefore + 0.05 && t.at >= R.answerSeconds - C.shoutBefore - 0.05, `locked at ${t.at && t.at.toFixed(2)} s`);
+    t = saveRound('right');
+    ok('a right answer needs no save (and keeps his save)', t.r.correct[0] && !t.r.saved[0] && t.x.buddy && t.x.buddy.save);
+    t = saveRound('wrong', false);
+    const t2 = saveRound('none', false);
+    ok('without him there\'s no save: wrong stays wrong, no answer stays no answer', !t.r.correct[0] && !t.r.saved[0] && t2.r.answers[0] === null && !t2.r.saved[0]);
+    // once per visit, and not after he's gone
+    m = mk(env, { mode: 'cpu', seed: 85, difficulty: 'hard' });
+    stepUntil(m, (x) => x.phase === 'answer');
+    m.callBuddy();
+    stepUntil(m, (x) => x.phaseT > 0.3);
+    m.pick(0, wrongFor(m.players[0].field.count));
+    m.buddySave(0, 'fix');
+    const used = m.buddy.save;
+    ok('one save per visit (the 🛡️ is used up)', used === false && m.view().buddy.save === false);
+    m = mk(env, { mode: 'cpu', seed: 86, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    m.callBuddy();
+    toAnswer(m);
+    stepUntil(m, (x) => x.phaseT > 0.4);
+    m.pick(0, wrongFor(m.players[0].field.count));
+    stepUntil(m, (x) => x.phase === 'result', 4);
+    ok('called at the start of a long round, he\'s gone by the answer, so no save', !m.buddy && !m.results[0].saved[0] && !m.results[0].correct[0]);
+    // two players: the high five
+    m = mk(env, { mode: '2p', seed: 87, difficulty: 'medium', tweakCounts: () => [20, 20] });
+    ok('two players: no visiting brother, T is a high five (and only while counting)', m.callBuddy() === 'phase' && !m.buddy);
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    drain(m);
+    const hf = m.callBuddy();
+    const hev = drain(m);
+    const both = [0, 1].map((i) => m.spotting(i) && m.spotted(i).length === 20 - m.visibleCount(i) && m.spotted(i).every((a) => m.players[i].field.animals.includes(a)));
+    ok('HIGH FIVE: both players spot their own hiding animals, a treat each', hf === 'ok' && both.every(Boolean) && hev.some((e) => e.type === 'highFive' && e.treats.length === 2));
+    ok(`then it rests ${C.highFiveRest.medium} s (${C.highFiveRest.easy} s on easy), and says no meanwhile`, m.callBuddy() === 'rest' && near(m.cheerT, C.highFiveRest.medium, 0.02) && near(mk(env, { mode: '2p', difficulty: 'easy' }).cheerRest(), C.highFiveRest.easy, 0.001));
+    let spotTicks = 0;
+    stepUntil(m, (x) => !x.spotting(0), 20, DT, () => spotTicks++);
+    ok(`the spotting lasts ${C.highFiveSpotSeconds} s for both`, near(spotTicks * DT, C.highFiveSpotSeconds) && !m.spotting(1), `${(spotTicks * DT).toFixed(2)} s`);
+    stepUntil(m, (x) => x.cheerT <= 0, 30);
+    ok('after its rest the high five works again', m.phase !== 'observe' || m.callBuddy() === 'ok');
+    // the computer never notices
+    const play = (calls) => {
+      const x = mk(env, { mode: 'cpu', difficulty: 'hard', seed: 88, chars: ['teddy', 'tommy'] });
+      const ans = [];
+      stepUntil(x, (y) => y.phase === 'final', 600, 0.05, (y) => {
+        if (calls && y.phase === 'observe' && Math.random() < 0.02) y.callBuddy();
+        if (y.phase === 'result') { ans.push(`${y.results[y.results.length - 1].answers[1]}@${y.players[1].ans.at}`); y.next(); }
+      });
+      return ans.join();
+    };
+    ok('calling your brother never changes what the computer answers', play(false) === play(true));
+    return out;
+  }
+
+  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy };
   // a check that crashes counts as failed, never as passed
   function runCheck(k, env) {
     try { return CHECKS[k](env); } catch (e) { return [{ name: `${k} crashed: ${e && e.message}`, ok: false, info: String(e && e.stack || e).split('\n')[1] || '' }]; }
@@ -515,7 +623,7 @@
     const M = SPOT.sim, R = SPOT.RULES, cfg = o.cfg || SPOT.CONFIG;
     const n = o.matches || 60;
     const probs = [];
-    const st = { matches: 0, rounds: 0, zero: 0, unanswered: 0, humanRounds: 0, cpu: {}, seen: {}, minGap: 9, ms: 0, ticks: 0 };
+    const st = { matches: 0, rounds: 0, zero: 0, unanswered: 0, humanRounds: 0, cpu: {}, seen: {}, minGap: 9, ms: 0, ticks: 0, calls: 0, saves: 0 };
     const t0 = Date.now();
     const NEXT = { ready: ['observe'], observe: ['answer'], answer: ['result'], result: ['ready', 'final'] };
     const chars = ['teddy', 'tommy', 'pilot'];
@@ -531,6 +639,7 @@
         for (const P of m.players) {
           if (!P.human) continue;
           const i = P.i;
+          if (m.phase === 'observe' || m.phase === 'answer') if (rng() < 0.003 && i === 0) { m.callBuddy(); st.calls++; }
           if (m.phase === 'observe') {
             if (rng() < 0.004) m.usePower(i);
             if (m.mode === '2p' && rng() < 0.01) m.adjust(i, rng() < 0.85 ? 1 : -1);
@@ -565,12 +674,16 @@
               }
             });
             if (r.answers.some((a) => a !== null && !(a >= 0 && a <= 20))) fail(`answer out of range ${r.answers}`);
+            r.saved.forEach((sv, i) => { if (sv) { st.saves++; if (!r.correct[i] || i !== 0 || m.mode !== 'cpu') fail(`a save that wasn't right, or for the wrong player (${i}, ${m.mode})`); } });
           }
           last = m.phase;
         }
         if (m.round < 1 || m.round > R.roundsPerGame) fail(`round ${m.round}`);
         const type = m.roundInfo.type;
         if (m.players.every((P) => P.field.count === 0)) fail('both fields empty');
+        if (m.buddy && m.mode !== 'cpu') fail('a visiting brother in two-player mode');
+        if (m.mode === 'cpu' && m.spotting(1)) fail('the computer got spotting help');
+        if (m.phase !== 'observe' && (m.spotting(0) || m.spotting(1))) fail(`spotting outside the observation (${m.phase})`);
         for (const P of m.players) {
           const f = P.field, mv = cfg.movement[f.type];
           if (f.type !== type || f.animals.length !== f.count || f.count < 0 || f.count > R.maxAnimals) fail(`field ${P.i}: ${f.type} x${f.animals.length} for ${f.count}`);
@@ -646,6 +759,14 @@
     run('a computer that forgets to answer', ['cpu'], withPatch((m) => { m.planCpuAnswer = function (i) { const p = SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); p.at = 9; return p; }; }));
     run('both right gives the round to player 1', ['scoring'], withPatch((m) => { m.score = function (a, c) { const r = M.scoreRound(a, c, this.bothWrong); if (r.why === 'bothRight') r.winner = 0; return r; }; }));
     run('a clicker number that counts without being locked', ['scoring'], withPatch((m) => { const rv = m.reveal; m.reveal = function () { this.players.forEach((P) => { if (!P.ans.locked && P.ans.draft !== null) { P.ans.locked = true; P.ans.value = P.ans.draft; } }); rv.call(this); }; }));
+    run('a brother who saves you even when he isn\'t there', ['buddy'], withPatch((m) => { m.buddyHere = () => true; const cb = m.callBuddy; m.callBuddy = function () { const r = cb.call(this); return r; }; m.buddy = { kind: 'tommy', phase: 'help', t: 0, helloT: 0, treatT: 0, treated: true, left: 1e9, visit: 10, save: true, byeT: 0 }; m.updateBuddy = function () {}; }));
+    run('a brother who never leaves', ['buddy'], withPatch((m) => { const ub = m.updateBuddy; m.updateBuddy = function (dt) { if (this.buddy) this.buddy.left = 99; ub.call(this, dt); }; }));
+    run('a brother who saves every time (no once-per-visit)', ['buddy'], withPatch((m) => { const bs = m.buddySave; m.buddySave = function (i, how) { bs.call(this, i, how); this.buddy.save = true; }; }));
+    run('a brother who answers after the 3 s', ['buddy'], withCfg((c) => { c.companion.shoutBefore = -0.5; }));
+    run('a brother who spots the computer\'s field too', ['buddy'], withPatch((m) => { const sp = m.spotting; m.spotting = function (i) { return sp.call(this, 0) || sp.call(this, i); }; }));
+    run('a high five that only helps player 1', ['buddy'], withPatch((m) => { const hf = m.highFive; m.highFive = function () { const r = hf.call(this); if (r === 'ok') this.players[1].spotT = 0; return r; }; }));
+    run('a high five with no rest', ['buddy'], withPatch((m) => { const hf = m.highFive; m.highFive = function () { const r = hf.call(this); this.cheerT = 0; return r; }; }));
+    run('a brother whose treats use the computer\'s dice', ['buddy'], withPatch((m) => { Object.defineProperty(m, 'rngBuddy', { get() { return this.rngCpu; }, set() {} }); }));
     run('unlocks that count the computer\'s wins', ['unlocks'], Object.assign(base(), { progress: Object.assign({}, M.progress, { record(p, cfg, final, mode) { const won = final.winner !== null; p.games++; if (won) p.wins++; const newly = []; for (const u of cfg.roster.unlocks) if (p.wins >= u.wins && !M.progress.has(p, cfg, u.id)) { p.unlocked.push(u.id); newly.push(u.id); } return { humanWon: won, newly }; } }) }));
     void env0;
     return cases;

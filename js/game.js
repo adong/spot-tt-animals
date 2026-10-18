@@ -36,6 +36,8 @@
     pilot: `Helicopter pilot. At night his helicopter lights up his binoculars for ${C.characters.pilot.durationSeconds} s. Then ${C.characters.pilot.cooldownSeconds} s to recharge. Night only.`,
   }[id]);
   const PCOL = ['#9fd0ff', '#9ff2d6'];
+  const nameOf = (kind) => (Kit.roster.get(kind) || { name: String(kind).toUpperCase() }).name;
+  const buddyFor = (id) => Kit.roster.buddyFor(id);
 
   // ---------------------------------------------------------------- storage
 
@@ -102,9 +104,11 @@
     match: null, demo: null, view: null,
     lensOpen: [0, 0], lensTarget: [0, 0], litK: [0, 0], frostK: [0, 0], tint: [-1, -1], revealK: 0,
     reveal: null, banner: null, ambientT: 3, final: null, finalNew: [], sparkT: 0,
+    pip: { until: 0, born: 0, ids: [], modes: [], hop: false }, treatFly: null, shouted: false, spotOn: [false, false],
   };
   let rects = [{ x: 0, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 100, h: 100 }];
   let upp = 0.03, portrait = false, short = false;
+  let pipRect = { x: 0, y: 0, w: 150, h: 168 };
   const cur = () => (st.mode === 'match' || st.mode === 'pause' ? st.match : st.demo);
 
   // ---------------------------------------------------------------- the animals' views (pooled per field and type)
@@ -248,6 +252,61 @@
     }
   }
 
+  // ---------------------------------------------------------------- your brother: the fence window and the arrows
+
+  const pip = A.makePip($('pip'));
+  const spots = [$('spot0'), $('spot1')];
+  function showPip(ids, modes, dur, hop) {
+    st.pip = { until: st.time + dur, born: st.time, ids, modes, hop: !!hop };
+    pip.show(ids);
+  }
+  function updatePip(dt) {
+    const el = $('pip'), tag = $('pipTag'), P = st.pip;
+    const on = st.mode === 'match' && st.time < P.until;
+    setCls(el, 'hidden', !on);
+    setCls(tag, 'hidden', !on);
+    if (!on) return;
+    const age = st.time - P.born, left = P.until - st.time;
+    const k = Math.min(1, age / 0.2, left / 0.2);
+    el.style.transform = `scale(${(0.4 + 0.6 * smooth(clamp(k, 0, 1))).toFixed(3)})`;
+    el.style.opacity = String(clamp(k * 1.5, 0, 1));
+    setCls(el, 'night', !!(st.view && st.view.sky === 'night'));
+    pip.render(P.modes, dt, st.time, P.hop);
+    tag.textContent = P.ids.length === 1 ? nameOf(P.ids[0]) : '✋ HIGH FIVE!';
+    tag.style.left = `${pipRect.x + pipRect.w / 2}px`;
+    tag.style.top = `${pipRect.y - 12}px`;
+    tag.style.transform = 'translateX(-50%)';
+  }
+  // the treat arcs from his window into your card
+  function flyTreat(emoji) {
+    const c = $('card0').querySelector('.face').getBoundingClientRect();
+    st.treatFly = { born: st.time, dur: 0.9, emoji, from: { x: pipRect.x + pipRect.w / 2, y: pipRect.y + pipRect.h * 0.45 }, to: { x: c.left + c.width / 2, y: c.top + c.height / 2 } };
+  }
+  function updateTreatFly() {
+    const el = $('treatFly'), T0 = st.treatFly;
+    if (!T0 || st.mode !== 'match') { el.classList.add('hidden'); return; }
+    const k = (st.time - T0.born) / T0.dur;
+    if (k >= 1) { el.classList.add('hidden'); st.treatFly = null; return; }
+    el.classList.remove('hidden');
+    el.textContent = T0.emoji;
+    const x = T0.from.x + (T0.to.x - T0.from.x) * k, y = T0.from.y + (T0.to.y - T0.from.y) * k - Math.sin(k * Math.PI) * 90;
+    el.style.left = `${x - 17}px`;
+    el.style.top = `${y - 17}px`;
+    el.style.transform = `rotate(${k * 540}deg) scale(${1 + Math.sin(k * Math.PI) * 0.4})`;
+  }
+  // arrows on your rim for your own hiding animals (your brother spotting, or a high five)
+  function updateSpots() {
+    const S = st.match, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (let i = 0; i < 2; i++) {
+      const on = !!(S && st.mode === 'match' && S.spotting(i));
+      if (!on && !st.spotOn[i]) continue;
+      st.spotOn[i] = on;
+      const r = rects[i];
+      const pts = on ? S.spotted(i).map((a) => { const q = M.toLens(C, a.x, a.z, 0.4); return [r.w / 2 + q.sx / upp, r.h / 2 - q.sy / upp]; }) : [];
+      A.paintSpots(spots[i], pts, { w: r.w, h: r.h, dpr, r: S ? S.lensFor(i) / upp : 1, lobe: C.lens.lobe, t: st.time });
+    }
+  }
+
   // ---------------------------------------------------------------- toasts and the banner (run on the game clock)
 
   const ptoasts = [[], []];
@@ -358,8 +417,42 @@
     for (let i = 0; i < 2; i++) {
       const r = rects[i];
       place(masks[i], r.x, r.y, r.w, r.h);
+      place(spots[i], r.x, r.y, r.w, r.h);
       place($('pui' + i), r.x, r.y, r.w, r.h);
     }
+    // your brother's button, bar and fence window: VS Computer in the corner of your binoculars, the high five on the fence
+    const bud = $('budBtn'), bar = $('budBar');
+    const budS = short ? 64 : 92, powS = short ? 64 : 92;
+    const two = S ? S.mode === '2p' : settings.mode === '2p';
+    const r0 = rects[0];
+    bar.classList.toggle('hidden', two || portrait || short || !S);
+    if (!two) {
+      const pw = short ? 96 : 150, ph = short ? 108 : 168;
+      if (!portrait) {
+        place(bud, r0.x + r0.w - budS - 14, r0.y + r0.h - budS - (short ? 12 : 22));
+        pipRect = { x: r0.x + 10, y: r0.y + r0.h - ph - 10, w: pw, h: ph };
+      } else {
+        const hasPow = !!(S && S.players[0].power.kind);
+        place(bud, r0.x + r0.w - 10 - budS - (hasPow ? powS + 14 : 0), r0.y + r0.h - budS - 14);
+        pipRect = { x: r0.x + r0.w - pw - 8, y: r0.y + 8, w: pw, h: ph };
+      }
+      const c0r = c0.getBoundingClientRect();
+      place(bar, c0r.right + 8, c0r.top + Math.max(0, (c0r.height - 46) / 2));
+    } else {
+      const pw = short ? 120 : 190, ph = short ? 90 : 140;
+      if (!portrait) {
+        const fxm = rects[0].x + rects[0].w + (rects[1].x - rects[0].x - rects[0].w) / 2, by = r0.y + r0.h - budS - (short ? 12 : 22);
+        place(bud, fxm - budS / 2, by);
+        pipRect = { x: fxm - pw / 2, y: by - ph - 22, w: pw, h: ph };
+      } else {
+        const fy = rects[1].y - (rects[1].y - r0.y - r0.h) / 2;
+        place(bud, w / 2 - budS / 2, fy - budS / 2);
+        // centred on the fence, so it covers both views the same (it sits over the button while it rests anyway)
+        pipRect = { x: w / 2 - pw / 2, y: fy - ph / 2, w: pw, h: ph };
+      }
+    }
+    place($('pip'), pipRect.x, pipRect.y, pipRect.w, pipRect.h);
+    pip.resize(pipRect.w, pipRect.h);
     renderer.setSize(w, h, false);
     titleCam.aspect = w / h;
     titleCam.updateProjectionMatrix();
@@ -419,6 +512,21 @@
       const clk = $('clk' + i);
       clk.classList.toggle('hidden', S.mode !== '2p');
     });
+    // your brother's button: his face (VS Computer) or both players' faces for the high five
+    const bud = $('budBtn'), imgs = bud.querySelectorAll('.pics img');
+    bud.classList.toggle('hidden', S.mode === 'demo');
+    bud.classList.toggle('two', S.mode === '2p');
+    if (S.mode === '2p') {
+      imgs[0].src = faceOf(S.players[0].char); imgs[1].src = faceOf(S.players[1].char); imgs[1].classList.remove('hidden');
+      bud.querySelector('small').textContent = 'HIGH FIVE';
+      bud.querySelector('.sv').classList.add('hidden');
+    } else {
+      const kind = buddyFor(S.lookOf(S.players[0].char));
+      imgs[0].src = faces[kind]; imgs[1].classList.add('hidden');
+      bud.querySelector('small').textContent = `CALL ${nameOf(kind)}`;
+      bud.querySelector('.sv').classList.remove('hidden');
+      $('budBar').querySelector('img').src = faces[kind];
+    }
     $('resH0').textContent = S.mode === 'cpu' ? 'YOU' : 'PLAYER 1';
     $('resH1').textContent = S.mode === 'cpu' ? 'COMPUTER' : 'PLAYER 2';
   }
@@ -442,6 +550,23 @@
     const an = ANIMAL[v.animal];
     setHtml($('roundInfo'), `${v.sky === 'night' ? '🌙 NIGHT' : '☀️ DAY'} · ${an.emoji} ${an.many} · ${DIFF[v.difficulty]}`);
     const revealDone = st.reveal && st.reveal.stamped;
+    // your brother's button and bar: the ring shows his time left (VS Computer) or the high five's rest (two players)
+    const bud = $('budBtn');
+    if (S.mode === 'cpu') {
+      const B = v.buddy;
+      bud.style.setProperty('--fill', B ? (B.left / B.visit).toFixed(3) : '1');
+      setCls(bud, 'on', !!(B && B.here));
+      setCls(bud, 'rest', false);
+      setCls(bud.querySelector('.sv'), 'used', !!(B && B.here && !B.save));
+      const bar = $('budBar');
+      setCls(bar, 'hidden', !B || !B.here || portrait || short);
+      if (B) { bar.querySelector('i').style.setProperty('--fill', (B.left / B.visit).toFixed(3)); setCls(bar.querySelector('em'), 'used', !B.save); }
+    } else if (v.cheer) {
+      const c = v.cheer;
+      bud.style.setProperty('--fill', c.rest > 0 ? (1 - c.rest / c.restMax).toFixed(3) : '1');
+      setCls(bud, 'rest', !c.ready);
+      setCls(bud, 'on', S.players.some((P) => P.spotT > 0));
+    }
     S.players.forEach((P, i) => {
       const p = v.players[i], card = $('card' + i);
       // a dot per round: yellow = won, grey = draw
@@ -492,7 +617,7 @@
         if (S.mode === 'cpu' && p.human) grids[i].forEach((b, n) => setCls(b, 'sel', p.entry === n));
         let hint;
         if (!p.human) hint = p.locked ? 'the computer has answered' : 'the computer is thinking';
-        else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : 'locked in!';
+        else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : st.shouted ? `🛡️ ${nameOf(v.buddy ? v.buddy.kind : 'tommy')} ANSWERED FOR YOU!` : 'locked in!';
         else if (isTouch) hint = 'tap your number';
         else if (S.mode === '2p') hint = i ? '↑ ↓ to fix your count · → or Enter to lock' : 'W S to fix your count · D or Space to lock';
         else hint = 'type the number, or click it';
@@ -503,7 +628,8 @@
       const stampOn = v.phase === 'result' && revealDone;
       setCls(stamp, 'hidden', !stampOn);
       if (stampOn) {
-        const said = p.answer === null ? 'NO ANSWER' : `SAID <b>${p.answer}</b>`;
+        const bk = S.mode === 'cpu' ? nameOf(v.buddy ? v.buddy.kind : buddyFor(S.lookOf(P.char))) : '';
+        const said = p.saved ? `<span>🛡️ ${bk} SAVED YOU!</span>` : p.answer === null ? 'NO ANSWER' : `SAID <b>${p.answer}</b>`;
         setHtml(stamp, `<span class="big2">${p.correct ? '✅' : '❌'}</span><span class="tx">THERE WERE <b>${p.count}</b> ${an.emoji}<br>${said}</span>`);
         stamp.className = 'stamp ' + (p.correct ? 'right' : 'wrong');
       }
@@ -521,8 +647,8 @@
       setHtml($('verdict'), verdict);
       for (let i = 0; i < 2; i++) {
         setHtml($('resC' + i), String(r.counts[i]));
-        setHtml($('resA' + i), r.answers[i] === null ? '—' : String(r.answers[i]));
-        setHtml($('resR' + i), r.correct[i] ? '✅ Correct' : r.answers[i] === null ? '⏰ No answer' : '❌ Incorrect');
+        setHtml($('resA' + i), r.saved[i] ? `${r.yours[i] === null ? '—' : r.yours[i]} → ${r.answers[i]} 🛡️` : r.answers[i] === null ? '—' : String(r.answers[i]));
+        setHtml($('resR' + i), r.saved[i] ? '🛡️ Saved!' : r.correct[i] ? '✅ Correct' : r.answers[i] === null ? '⏰ No answer' : '❌ Incorrect');
       }
       setHtml($('resScore'), `SCORE ${v.scores[0]} – ${v.scores[1]} · ROUND ${v.round} OF ${v.rounds}`);
       setHtml($('nextBtn'), v.round >= v.rounds ? 'FINAL SCORE ▶' : 'NEXT ROUND ▶');
@@ -584,6 +710,7 @@
       case 'round': {
         st.lensTarget = [0, 0];
         st.reveal = null;
+        st.shouted = false;
         hideBadges();
         clearToasts();
         const an = ANIMAL[e.animal];
@@ -620,6 +747,39 @@
       case 'lock': SFX.lock(); break;
       case 'reveal': startReveal(S); break;
       case 'matchEnd': showFinal(e); break;
+      // your brother
+      case 'buddyHello': {
+        SFX.hello();
+        showPip([e.who], [Kit.roster.signature(Kit.roster.get(e.who), 'hello')], C.companion.helloSeconds + C.companion.treatFlySeconds + 0.5, true);
+        if (S.phase === 'observe') { ptoast(0, `👀 ${nameOf(e.who)} IS SPOTTING!`, 'sun', 1.8); SFX.spot(); }
+        break;
+      }
+      case 'treat':
+        st.pip.modes = ['wave'];
+        st.pendingTreat = e;
+        flyTreat(e.emoji);
+        break;
+      case 'treatGot':
+        if (st.pendingTreat) { ptoast(0, `${st.pendingTreat.emoji} ${st.pendingTreat.name} FROM ${nameOf(e.who)}!`, 'sun', 2.2); SFX.treat(); st.pendingTreat = null; }
+        st.pip.modes = ['look'];
+        break;
+      case 'buddyBye': showPip([e.who], [Kit.roster.signature(Kit.roster.get(e.who), 'goodbye')], C.companion.byeSeconds, true); break;
+      case 'buddySave':
+        if (e.how === 'answer') st.shouted = true;
+        ptoast(0, `${nameOf(e.who)} SAVED YOU!`, 'save', 2.2);
+        SFX.save();
+        showPip([e.who], [Kit.roster.signature(Kit.roster.get(e.who), 'hello')], 1.8, true);
+        break;
+      case 'highFive': {
+        const looks = S.players.map((P) => CHAR[P.char].look);
+        showPip(looks, looks.map((id) => Kit.roster.signature(Kit.roster.get(id), 'hello')), 2.3, true);
+        SFX.cheer();
+        SFX.spot();
+        // each gets a treat from the other one, and both spot their own hiding animals
+        e.treats.forEach((t, i) => { ptoast(i, `${t.emoji} ${t.name} FROM ${CHAR[S.players[1 - i].char].name}!`, 'sun', 2.2); ptoast(i, '👀 SPOT THE HIDING ONES!', '', 1.8); });
+        break;
+      }
+      case 'cheerNo': nudge($('budBtn')); SFX.nope(); break;
     }
   }
 
@@ -647,6 +807,7 @@
     const S = st.match;
     if (st.mode === 'match' && S) {
       if (c === 'KeyP' || c === 'Escape') { pause(); return; }
+      if (c === 'KeyT') { e.preventDefault(); if (!e.repeat) callBuddy(); return; }
       if (S.phase === 'result' || S.phase === 'final') {
         if (c === 'Enter' || c === 'Space' || c === 'KeyN' || c === 'NumpadEnter') { e.preventDefault(); next(); }
         return;
@@ -710,6 +871,21 @@
     });
   });
   $('nextBtn').addEventListener('click', next);
+  // your brother: VS Computer calls him (as often as you like), two players high-five
+  function callBuddy() {
+    const S = st.match;
+    if (!S || st.mode !== 'match') return;
+    S.callBuddy();
+  }
+  $('budBtn').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    firstGesture();
+    const el = $('budBtn');
+    el.classList.add('down');
+    setTimeout(() => el.classList.remove('down'), 120);
+    callBuddy();
+  });
 
   function toggleMute() {
     Kit.sound.init();
@@ -746,7 +922,7 @@
     const chars = o.chars || settings.chars;
     st.match = new M.Match({
       mode: o.mode || settings.mode, difficulty: o.difficulty || settings.difficulty, sky: o.sky || settings.sky,
-      chars, seed: o.seed, bothWrong: o.bothWrong || settings.bothWrong, cfg: o.cfg,
+      chars, seed: o.seed, bothWrong: o.bothWrong || settings.bothWrong, cfg: o.cfg, buddyFor,
     });
     st.demo = null;
     st.final = null;
@@ -757,6 +933,10 @@
     st.litK = [0, 0];
     st.frostK = [0, 0];
     st.revealK = 0;
+    st.pip.until = 0;
+    st.treatFly = null;
+    st.shouted = false;
+    st.pendingTreat = null;
     fx.clear();
     hideBadges();
     clearToasts();
@@ -888,9 +1068,13 @@
     else { title = 'WINNER!'; sub = `${S.mode === 'cpu' ? 'YOU' : `${names[f.winner]} (${chars[f.winner].name})`} · ${f.scores[0]} – ${f.scores[1]}`; }
     $('finalTitle').textContent = title;
     $('finalSub').textContent = sub;
+    const nSaves = f.results.filter((r) => r.saved[0]).length;
+    const fs = $('finalSaves');
+    fs.classList.toggle('hidden', !(S.mode === 'cpu' && nSaves));
+    if (S.mode === 'cpu' && nSaves) fs.textContent = `🛡️ ${nameOf(buddyFor(S.lookOf(S.players[0].char)))} SAVED YOU ${nSaves} TIME${nSaves === 1 ? '' : 'S'}!`;
     const rows = [`<span></span><span class="h p0">${names[0]}</span><span class="h p1">${names[1]}</span>`];
     f.results.forEach((r, k) => {
-      const cell = (i) => `${r.correct[i] ? '✅' : '❌'} ${r.answers[i] === null ? '—' : r.answers[i]} / ${r.counts[i]}`;
+      const cell = (i) => `${r.saved[i] ? '🛡️' : r.correct[i] ? '✅' : '❌'} ${r.answers[i] === null ? '—' : r.answers[i]} / ${r.counts[i]}`;
       rows.push(`<span>${k + 1}. ${ANIMAL[r.animal].emoji}${r.sky === 'night' ? '🌙' : ''}</span><span>${cell(0)}</span><span>${cell(1)}</span>`);
     });
     rows.push(`<span class="h">TOTAL</span><span class="tot">${f.scores[0]}</span><span class="tot">${f.scores[1]}</span>`);
@@ -1015,6 +1199,9 @@
     }
     fx.update(dt);
     if (st.mode === 'match' || st.mode === 'pause') updateHud();
+    updatePip(dt);
+    updateTreatFly();
+    updateSpots();
     updateToasts();
     updateBanner();
     paintMasks();
@@ -1096,13 +1283,15 @@
         screen: st.mode, phase: v && v.phase, round: v && v.round, sky: v && v.sky, animal: v && v.animal,
         timeLeft: v && +v.timeLeft.toFixed(2), scores: v && v.scores,
         players: v && v.players.map((p, i) => ({ char: p.char, human: p.human, lens: +p.lens.toFixed(2), frozen: p.frozen, lit: p.lit, locked: p.locked, entry: p.entry, answer: p.answer, count: p.count, power: { kind: p.power.kind, active: p.power.active, cool: +p.power.coolLeft.toFixed(1), ready: p.power.ready }, visible: S.visibleCount(i) })),
-        result: v && v.result, final: v && v.final, progress: prog,
+        result: v && v.result, final: v && v.final, progress: prog, buddy: v && v.buddy, cheer: v && v.cheer,
+        spotted: S ? [0, 1].map((i) => S.spotted(i).length) : null,
       };
     },
     // the real counts, for tests only (the screen never shows them before the reveal)
     counts() { const S = st.match; return S ? S.players.map((P) => P.field.count) : null; },
     sim: () => st.match,
     power(i = 0) { const S = st.match; return S && S.usePower(i); },
+    buddy() { const S = st.match; return S && S.callBuddy(); },
     pick(i, n) { return st.match && st.match.pick(i, n); },
     type(i, d) { return st.match && st.match.typeDigit(i, d); },
     adjust(i, d) { return st.match && st.match.adjust(i, d); },

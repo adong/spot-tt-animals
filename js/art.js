@@ -541,6 +541,71 @@
     }
   }
 
+  // ---------------------------------------------------------------- the fence window: your brother on the fence
+
+  // A little window in the corner of your binoculars where your brother (the companion) climbs up on the fence: he says hi
+  // with his signature move, looks through his own binoculars to spot for you, and waves goodbye. It has its own small
+  // renderer and scene, so it can sit on top of the binocular frame. With two players both brothers appear for a high five.
+  function makePip(canvas) {
+    const renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.outputEncoding = T.sRGBEncoding;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    const scene = new T.Scene();
+    scene.add(new T.HemisphereLight('#ffffff', '#6a8a4a', 1.0));
+    const sun = new T.DirectionalLight('#fff3e0', 0.9);
+    sun.position.set(-3, 6, 6);
+    scene.add(sun);
+    const camera = new T.PerspectiveCamera(30, 1, 0.1, 60);
+    camera.position.set(0, 1.6, 5.6);
+    camera.lookAt(0, 1.22, 0);
+    const ground = new T.Mesh(new T.PlaneGeometry(30, 30), std('#6cbf45', { roughness: 1 }));
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+    const wood = new T.MeshStandardMaterial({ map: tex.wood, roughness: 0.9 }), post = std('#8e5a2e');
+    for (const x of [-1.6, 0, 1.6]) box(0.16, 0.95, 0.16, post, x, 0.47, 0.7, scene);
+    box(4, 0.16, 0.08, wood, 0, 0.42, 0.72, scene);
+    box(4, 0.16, 0.08, wood, 0, 0.82, 0.72, scene);
+    const stalk = std('#4f9f33'), cob = std('#ffd23f');
+    for (let k = 0; k < 9; k++) {
+      const x = -2.4 + k * 0.6 + srand(-0.1, 0.1), h = srand(1.9, 2.5);
+      box(0.08, h, 0.08, stalk, x, h / 2, -1.4 - (k % 2) * 0.3, scene);
+      box(0.1, 0.26, 0.1, cob, x + 0.07, h * 0.55, -1.35 - (k % 2) * 0.3, scene);
+    }
+    const kids = {};
+    let shown = [];
+    function kidFor(id, slot) {
+      const key = `${id}#${slot}`;
+      if (!kids[key]) { kids[key] = makeKid(id); scene.add(kids[key].root); }
+      return kids[key];
+    }
+    return {
+      canvas,
+      // ids: who is on the fence (one, or two for a high five)
+      show(ids) {
+        for (const k of Object.values(kids)) k.root.visible = false;
+        shown = ids.map((id, s) => {
+          const k = kidFor(id, s);
+          const x = ids.length === 1 ? 0 : (s ? 0.7 : -0.7);
+          k.root.position.set(x, 0, 0);
+          k.root.rotation.y = Math.PI + (ids.length === 1 ? 0 : (s ? 0.3 : -0.3));
+          k.root.visible = true;
+          return k;
+        });
+      },
+      resize(w, h) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); },
+      // modes: one pose per kid ('look' raises the binoculars; anything else is a Kit pose)
+      render(modes, dt, t, hop) {
+        shown.forEach((k, s) => {
+          A_poseKid(k, modes[s] || 'look', dt, t);
+          k.root.position.y = hop ? Math.abs(Math.sin(t * 5 + s)) * 0.25 : 0;
+        });
+        renderer.render(scene, camera);
+      },
+    };
+  }
+  const A_poseKid = (k, mode, dt, t) => poseKid(k, mode, dt, t);
+
   // ---------------------------------------------------------------- little effects: badges, sparkles, confetti
 
   function makeFx(scene) {
@@ -730,5 +795,37 @@
     }
   }
 
-  SPOT.art = { FX, FW, FD, TILT, tex, initTextures, makeWorld, animalMats, makeAnimal, poseAnimal, makeHeli, updateHeli, heliSpot, makeKid, poseKid, makeFx, makeBadge, badgeTexture, paintMask, setLayer };
+  // Your brother's arrows: one on your lens rim for every animal of YOURS hiding outside it, pointing at where it is.
+  // pts: [[px, py], ...] in the view's pixels; o: { w, h, dpr, r, lobe, t }
+  function paintSpots(cv, pts, o) {
+    const W = Math.round(o.w * o.dpr), H = Math.round(o.h * o.dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const x = cv.getContext('2d');
+    x.setTransform(o.dpr, 0, 0, o.dpr, 0, 0);
+    x.clearRect(0, 0, o.w, o.h);
+    if (!pts.length) return;
+    const cx = o.w / 2, cy = o.h / 2, off = o.lobe * o.r, pulse = 1 + Math.sin(o.t * 7) * 0.12;
+    const size = Math.max(9, o.r * 0.09) * pulse;
+    x.lineJoin = 'round';
+    for (const [px, py] of pts) {
+      const c = px < cx ? cx - off : cx + off;
+      let dx = px - c, dy = py - cy;
+      const d = Math.hypot(dx, dy) || 1;
+      dx /= d; dy /= d;
+      const tipX = c + dx * (o.r - 5), tipY = cy + dy * (o.r - 5);
+      const bx = tipX - dx * size * 1.9, by = tipY - dy * size * 1.9;
+      x.beginPath();
+      x.moveTo(tipX, tipY);
+      x.lineTo(bx - dy * size, by + dx * size);
+      x.lineTo(bx + dy * size, by - dx * size);
+      x.closePath();
+      x.fillStyle = '#ffd400';
+      x.strokeStyle = '#14121f';
+      x.lineWidth = 3;
+      x.stroke();
+      x.fill();
+    }
+  }
+
+  SPOT.art = { FX, FW, FD, TILT, tex, initTextures, makeWorld, animalMats, makeAnimal, poseAnimal, makeHeli, updateHeli, heliSpot, makeKid, poseKid, makeFx, makeBadge, badgeTexture, paintMask, paintSpots, makePip, setLayer };
 })();

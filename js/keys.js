@@ -8,8 +8,9 @@ Kit.help.setup({
     ['use your power ❄️ freeze · 🚁 spotlight', 'A or Space', '← or Enter'],
     ['lock your answer (you have 3 s!)', 'D or Space', '→ or Enter'],
     ['VS Computer: type the number', '0 – 9 · Backspace', ''],
+    ['call your brother · high five', 'T', ''],
     ['next round · pause · sound', 'Enter · P or Esc · M', ''],
   ],
-  note: 'Two players: your count is hidden (it shows ●● whatever the number), so the other player can\'t read it. VS Computer: type the number and it locks by itself (1 and 2 wait a moment for a second digit).',
-  touch: 'Tap your power button while you count. When the binoculars shut, tap your number from 0 to 20: that locks it. Two players on an iPad: each taps on their own side.',
+  note: 'Two players: your count is hidden (it shows ●● whatever the number), so the other player can\'t read it. VS Computer: type the number and it locks by itself (1 and 2 wait a moment for a second digit). Call your brother as often as you like: he spots your hiding animals and has your back once.',
+  touch: 'Tap your power button while you count. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother\'s face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.',
 });

@@ -5,7 +5,7 @@
 Press **?** any time (or tap the round **?** button on the left edge) to see the keys. The game waits while you look.
 Tap the language button under it (the A文 icon) to switch between English and 中文; the dashboard and every game remember the choice.
 
-Teddy's own game. He wrote the design document; this build follows it. Two players look through binoculars into two cornfields split by a fence, and each counts the farm animals in their own field before time runs out: 60, 30 or 15 seconds. Then the binoculars snap shut, and you have **three seconds** to say how many. Five rounds make a game. Teddy has bigger binoculars, Tommy can freeze his animals, and at night the helicopter pilot lights up his own field. Very rarely, a field is empty.
+Teddy's own game. He wrote the design document; this build follows it. Two players look through binoculars into two cornfields split by a fence, and each counts the farm animals in their own field before time runs out: 60, 30 or 15 seconds. Then the binoculars snap shut, and you have **three seconds** to say how many. Five rounds make a game. Teddy has bigger binoculars, Tommy can freeze his animals, and at night the helicopter pilot lights up his own field. Very rarely, a field is empty. And like every family game, you can **call your brother**: against the computer he climbs up on the fence, spots the animals hiding outside your binoculars and has your back once; with two players it's a **high five**.
 
 It's built with Claude Code from plain JavaScript and Three.js, on the shared Claude Games kit (the blocky Teddy and Tommy, menu portraits, synth sound, the ? keys panel and English / 中文). There are no image, model or sound files: the farm, the animals and the helicopter are built from boxes, every texture is painted on a canvas, and every sound is synthesised.
 
@@ -50,11 +50,12 @@ After five rounds you get **WINNER!** (or a draw) with a round-by-round table, y
 | use your power: ❄️ freeze · 🚁 spotlight | A (or Space while counting) | ← (or Enter while counting) | your round power button |
 | lock your answer | D (or Space) | → (or Enter) | tap your number, 0 to 20 |
 | VS Computer: type the number | 0–9, Backspace | | |
+| call your brother (VS Computer) · high five (two players) | T | | his face · the high-five button on the fence |
 | next round · pause · sound | Enter · P or Esc · M | | NEXT ROUND · ❚❚ · 🔊 |
 
 - **Two players on one keyboard:** your count is a hidden clicker. Press up once for each animal you count, and lock it when the binoculars shut. The box shows **●●** whatever the number, so the other player can't read it, and the clicker makes no sound in two-player mode, so nobody can count your clicks by ear.
 - **VS Computer on a keyboard:** just type the number. 3 to 9 and 0 lock at once. 10 to 20 lock at the second digit. A lone 1 or 2 waits 0.8 s for a second digit and then locks by itself; Enter locks it straight away. You can see your own box (the computer can't read it), and a number typed inside the 3 s still counts at the buzzer. The clicker keys work too.
-- **Touch (iPad or phone):** when the binoculars shut, each player gets a 0–20 pad on their own side. One tap locks that number. Your power button sits under your binoculars (in the corner when the phone stands up).
+- **Touch (iPad or phone):** when the binoculars shut, each player gets a 0–20 pad on their own side. One tap locks that number. Your power button sits under your binoculars (in the corner when the phone stands up), with your brother's face button next to it; the high-five button sits on the fence.
 - **Mouse:** the number pads can be clicked as well.
 - **Menus:** Enter plays, C opens characters, S opens settings. On setup, 1 picks two players, 2 picks VS Computer, Enter starts and Esc goes back. Enter plays again after the final score.
 
@@ -117,14 +118,37 @@ It doesn't help much, because the two fields always have different counts. Separ
 - **Sound:** synthesised moos, baas, clucks and crows now and then while you count (never one per animal, so the sounds never give the count away), 3-2-1 beeps, a GO whistle, ticks for the last five seconds, a shutter snap, counting pips, freeze shimmer, helicopter whup-whup, fanfares. M or 🔊 mutes.
 - **English / 中文:** the kit's round language button (A文, under the ? button) switches every screen live. The game's words are in `js/zh.js`.
 
-## Companion
+## Call your brother (companion mode)
 
-Not yet. Every family game has a way to call the other brother, but Teddy's document doesn't have one, and it asks the developer not to invent gameplay quietly. So this build has none, and the question is open for Alan (and Teddy):
+The series' companion, added at Alan's request (every family game has one). It isn't in Teddy's document, so it lives apart from his rules in `CONFIG.companion`, and it never bends them: everything it does happens in your own field, inside the 3 s.
 
-- One light option: in VS Computer, tap the other brother's face and he waves from the fence and recounts one round with you, as a second guess.
-- Another: he tosses a treat but doesn't change the count.
+![Teddy spots the sheep hiding outside Tommy's binoculars](docs/companion.jpg)
 
-Nothing is built until someone picks.
+**VS Computer:** your companion is the other brother: Tommy for Teddy and for the pilot, Teddy for Tommy (`Kit.roster.buddyFor`). Call him with **T**, or tap the big round button with his face (bottom right of your binoculars), as often as you like. There's no cooldown.
+
+- **He climbs up on the fence** next to your binoculars, in a little window in the corner, with his name tag.
+- **He says hi** with his signature move: Tommy does his Y pose, Teddy shadow-boxes (jab, straight).
+- **He tosses you a treat** (🍦 💧 🧃 🍪 🍉 🍌). It arcs into your card: **"🍦 ICE CREAM FROM TOMMY!"**
+- **He spots for you, for about 10 s:** he looks through his own binoculars into *your* field, and puts a yellow arrow on your lens rim for every one of your animals hiding outside it, pointing where it is ("👀 TOMMY IS SPOTTING!"). You still can't see them, so you still have to count them: the arrows just say they're there.
+- **He has your back, once per visit.** If he's there when the binoculars shut, then:
+  - **a wrong answer** becomes the right one;
+  - **no answer** with 0.6 s left: he shouts the right number for you, inside the 3 s.
+
+  Either way: **"TOMMY SAVED YOU!"** pops up, his window comes back with his hello move, and the stamp and table show it ("9 → 8 🛡️ Saved!"). The 🛡️ on his button and bar greys out once he's used it.
+- **His time bar:** the bar with his face next to your card shows the time left, and so does the ring around his button.
+- **Call again** once his treat has landed: he says hi again, brings another treat, stays the whole 10 s again and re-arms his save. Calling before the treat lands just keeps him there longer.
+- **At the end** he does his goodbye move (Teddy's jump shot, Tommy's Y) and climbs down.
+- **Fair and square:** he only ever helps you and only in your own field. He never helps the computer, and the computer never notices him: the check proves its answers are the same whether you call him or not. The final screen says how many times he saved you.
+- **Timing matters:** a visit is 10 s, so call him near the end of the count if you want him there when the binoculars shut.
+
+![High five: both brothers on the fence, swapping treats](docs/high-five.jpg)
+
+**Two players:** the button (on the fence between the binoculars) or T is a **HIGH FIVE**, during the count:
+
+- Both brothers pop up on the fence window and do their signature moves, with ✋ HIGH FIVE!
+- They swap treats ("🍦 ICE CREAM FROM TOMMY!", "🍌 BANANA FROM TEDDY!").
+- **Both** players get 5 s of spotting arrows, each in their own field, so it's the same help for both.
+- Then it rests for 20 s (12 s on easy), and its ring refills as it does. Pressing it while it rests just wiggles it.
 
 ## Modes
 
@@ -171,6 +195,7 @@ Other proposals of mine, all in `js/config.js`:
   - The 3 s ends early once both answers are locked (`timing.endAnswerWhenBothLocked`); it never runs longer.
 - **The 🌗 MIX sky:** half the rounds are night (`sky.mixNightChance`).
 - **Scoring:** a point per round won and none for a draw (the document's proposed scoring, `scoring`).
+- **Your brother** (Alan's series feature, `companion`): visits last 10 s; he spots your hiding animals; one save per visit, shouting the number with 0.6 s left; the two-player high five gives both players 5 s of spotting and rests 20 s (12 s on easy).
 
 ## How it's tested
 
@@ -184,7 +209,7 @@ node tools/check.js
 node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --hard] [--day | --night | --mix]
 ```
 
-- **Rules (100 checks in 13 groups):**
+- **Rules (117 checks in 14 groups):**
   - **Teddy's rules in the config:** 5 rounds, 60/30/15 s, 3 s, at most 20, zero rare, a freeze cooldown, Teddy's bigger binoculars.
   - **Timing on every difficulty, two players and VS Computer:**
     - the observation lasts exactly 60 / 30 / 15 s;
@@ -219,7 +244,15 @@ node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --h
     - the second win unlocks the pilot, once;
     - progress is saved and loaded, and broken saved data starts fresh.
   - **Day and night:** night games are all night, mixed games have both.
-- **Sabotage (29 broken setups, all must be caught).** These prove the checks can fail:
+  - **Your brother (17 checks):**
+    - the right brother comes (Tommy for Teddy and the pilot, Teddy for Tommy);
+    - hello, a treat that lands, a 10 s visit, goodbye;
+    - calling again brings another hello and treat, the whole visit and the save again, and never a second brother;
+    - he spots exactly your animals hiding outside your lenses, never the computer's;
+    - a wrong answer while he's there becomes right; no answer, and he shouts the number inside the 3 s; a right answer keeps his save; without him, no save; one save per visit; called too early in a long round, he's gone by the answer;
+    - two players: T is a high five (only while counting), both spot their own field for 5 s, a treat each, then a 20 s rest (12 s on easy), and it works again after;
+    - calling him never changes the computer's answers.
+- **Sabotage (37 broken setups, all must be caught).** These prove the checks can fail:
   - a config with 4 rounds, 20 s on hard, 5 s to answer, 25 animals, or no freeze cooldown;
   - a game whose answer window really is 5 s, or whose hard round really is 20 s;
   - a game of four rounds;
@@ -233,21 +266,24 @@ node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --h
   - a computer that copies your count, is always right, or forgets to answer;
   - both right going to player 1;
   - a clicker number counting without being locked;
-  - unlocks that count the computer's wins.
+  - unlocks that count the computer's wins;
+  - a brother who saves you when he isn't there, never leaves, saves every time, answers after the 3 s, spots the computer's field too, or uses the computer's dice for his treats;
+  - a high five that only helps player 1, or one with no rest.
 - **Soak:** whole matches with movement:
   - half two players and half VS Computer, on every difficulty and sky, with random characters;
-  - little bots press powers and clickers and answer at random moments (some too late, some wrong);
-  - every tick checks the phase order, 5 rounds, the counts and types, animals inside the field, a frozen or lit field only with its own power, no answer or count on screen before the reveal, and the final score adding up.
+  - little bots press powers and clickers, call their brother or high-five, and answer at random moments (some too late, some wrong);
+  - every tick checks the phase order, 5 rounds, the counts and types, animals inside the field, a frozen or lit field only with its own power, no answer or count on screen before the reveal, a visiting brother only in VS Computer, spotting only for your own field and only while counting, every save right and only for you, and the final score adding up.
 - **Last run:**
-  - Rules 100 of 100, sabotage 29 of 29 caught.
-  - Soak: 200 of 200 matches finished, 1,000 rounds, 2.6 million ticks, no problems (about 100 s). 9 zero rounds (0.9%).
+  - Rules 117 of 117, sabotage 37 of 37 caught.
+  - Soak: 200 of 200 matches finished, 1,000 rounds, 2.6 million ticks, no problems (about 80 s). 9 zero rounds (0.9%). The bots called their brother (or tried a high five) 6,944 times; he saved 201 answers, all of them right and all for the human.
   - The computer was right 57% / 75% / 90% on easy / medium / hard. The soak keeps its night and power nudges on, which pulls easy a little below 60%.
   - On average the pilot and Tommy each saw 81% of their own animals at any moment; Teddy saw 100%. The closest two animals ever got was 0.89 of their room.
 - **In the Browser pane** (served from `~/claude-games` on port 8766), no console messages. Checked:
   - every screen at 1200 × 750 and 800 × 500;
   - phone landscape 740 × 360 and iPad 1024 × 768 with `?touch=1`, and phone portrait 390 × 844;
   - real key presses (two-player clickers and locks) and a real tap on the number pad;
-  - 中文 on every screen, through a whole match, with `Kit.lang.untranslated()` coming back empty.
+  - 中文 on every screen, through a whole match, with `Kit.lang.untranslated()` coming back empty (also through the companion's hello, treat, spotting, saves, the high five and its rest);
+  - the companion at 1200 × 750, 740 × 360 and 390 × 844: the fence window, the call button beside the power button, the arrows, a save at the reveal, a last-moment shout, and the high five (centred on the fence when the phone stands up, so it covers both views the same).
 - **Real frames:** a copy of the single page ran with a timer-driven `requestAnimationFrame` (in the gitignored `.claude/`).
   - A hard round's observation took 15.00 s of real time, and the answer window 3.00 s.
   - With the ? panel open for 3 s, the clock didn't move, and it carried on normally after closing.
@@ -311,4 +347,5 @@ These are written here first. They're worth moving into `~/claude-games/kit` if 
 - **Two kids on one keyboard:** the key layout (WASD against the arrows, both clickers) was pressed by a script, not by two real players side by side.
 - **Whether 3 s is enough for Tommy** to tap or type his number, and whether counting 20 moving animals in 15 s is fun or just hard. The numbers in `js/config.js` are there to tune after the brothers try it.
 - **Night difficulty:** the dark is a guess. It may be too easy or too hard to see the brown hens and red roosters.
+- **The companion's feel:** whether the spotting arrows are too much help, whether 10 s is the right visit, and whether the save makes VS Computer too easy for Teddy (he can simply not call his brother). It's all in `CONFIG.companion`.
 - **Long real-time sessions:** most play was driven with `game.step()`. The real-frames copy ran one full round and a second round with the ? panel open.
