@@ -3,6 +3,7 @@
 [![Spot TT Animals title screen](docs/screenshot.jpg)](https://adong.github.io/spot-tt-animals/)
 
 Press **?** any time (or tap the round **?** button on the left edge) to see the keys. The game waits while you look.
+Tap the language button under it (the A文 icon) to switch between English and 中文; the dashboard and every game remember the choice.
 
 Teddy's own game. He wrote the design document; this build follows it. Two players look through binoculars into two cornfields split by a fence, and each counts the farm animals in their own field before time runs out: 60, 30 or 15 seconds. Then the binoculars snap shut, and you have **three seconds** to say how many. Five rounds make a game. Teddy has bigger binoculars, Tommy can freeze his animals, and at night the helicopter pilot lights up his own field. Very rarely, a field is empty.
 
