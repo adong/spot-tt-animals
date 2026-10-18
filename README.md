@@ -5,7 +5,7 @@
 Press **?** any time (or tap the round **?** button on the left edge) to see the keys. The game waits while you look.
 Tap the language button under it (the A文 icon) to switch between English and 中文; the dashboard and every game remember the choice.
 
-Teddy's own game. He wrote the design document; this build follows it. Two players look through binoculars into two cornfields split by a fence, and each counts the farm animals in their own field before time runs out: 60, 30 or 15 seconds. Then the binoculars snap shut, and you have **three seconds** to say how many. Five rounds make a game. Teddy has bigger binoculars, Tommy can freeze his animals, and at night the helicopter pilot lights up his own field. Very rarely, a field is empty. And like every family game, you can **call your brother**: against the computer he climbs up on the fence, spots the animals hiding outside your binoculars and has your back once; with two players it's a **high five**.
+Teddy's own game. He wrote the design document; this build follows it. Two players look through binoculars into two cornfields split by a fence, and each counts the farm animals in their own field before time runs out: 60, 30 or 15 seconds. Sure early? Say how many straight away. Otherwise the binoculars snap shut and you have **30 seconds** to answer (Teddy's document said three; Alan made it 30 after playing). Five rounds make a game. Teddy has bigger binoculars, Tommy can freeze his animals, and at night the helicopter pilot lights up his own field. Very rarely, a field is empty. And like every family game, you can **call your brother**: against the computer he climbs up on the fence, spots the animals hiding outside your binoculars and has your back once; with two players it's a **high five**.
 
 It's built with Claude Code from plain JavaScript and Three.js, on the shared Claude Games kit (the blocky Teddy and Tommy, menu portraits, synth sound, the ? keys panel and English / 中文). There are no image, model or sound files: the farm, the animals and the helicopter are built from boxes, every texture is painted on a canvas, and every sound is synthesised.
 
@@ -36,8 +36,9 @@ Then press **START**.
 1. **ROUND 1 OF 5**, then **3… 2… 1… GO!**
 2. The binoculars open, and both players count at the same time.
 3. The clock turns red for the last **5 4 3 2 1**.
-4. The lenses snap shut, and **HOW MANY SHEEP?** comes up with **3 seconds** on the clock.
-5. Once both answers are locked (or the 3 s are up), the binoculars come away. Every animal in each field gets a number badge, counted out loud with a rising *pip*, including the ones that were hiding outside your lenses.
+4. The lenses snap shut, and **HOW MANY SHEEP?** comes up with **30 seconds** on the clock.
+   - **Sure already?** You don't have to wait for the clock: type your number, tap **✋ READY**, or press your lock key while still counting. Your binoculars shut, your answer box opens (with its own 30 s), and the other player keeps counting. Once everyone has answered, the round moves straight on, so against the computer it's straight to the reveal.
+5. Once both answers are locked (or the time is up), the binoculars come away. Every animal in each field gets a number badge, counted out loud with a rising *pip*, including the ones that were hiding outside your lenses.
 6. Then: ✅ or ❌ on each side, the actual counts, both answers, who won the round, and the score.
 
 After five rounds you get **WINNER!** (or a draw) with a round-by-round table, your unlock progress, and **PLAY AGAIN**.
@@ -48,30 +49,37 @@ After five rounds you get **WINNER!** (or a draw) with a round-by-round table, y
 |---|---|---|---|
 | count +1 · −1 (your hidden clicker) | W · S | ↑ · ↓ | |
 | use your power: ❄️ freeze · 🚁 spotlight | A (or Space while counting) | ← (or Enter while counting) | your round power button |
-| lock your answer | D (or Space) | → (or Enter) | tap your number, 0 to 20 |
-| VS Computer: type the number | 0–9, Backspace | | |
+| I'm ready: answer early, while still counting | D | → | ✋ READY, then tap your number |
+| lock your answer (after the count you have 30 s) | D (or Space) | → (or Enter) | tap your number, 0 to 20 |
+| VS Computer: type the number (any time, even while counting) | 0–9, Backspace | | |
 | call your brother (VS Computer) · high five (two players) | T | | his face · the high-five button on the fence |
 | next round · pause · sound | Enter · P or Esc · M | | NEXT ROUND · ❚❚ · 🔊 |
 
 - **Two players on one keyboard:** your count is a hidden clicker. Press up once for each animal you count, and lock it when the binoculars shut. The box shows **●●** whatever the number, so the other player can't read it, and the clicker makes no sound in two-player mode, so nobody can count your clicks by ear.
-- **VS Computer on a keyboard:** just type the number. 3 to 9 and 0 lock at once. 10 to 20 lock at the second digit. A lone 1 or 2 waits 0.8 s for a second digit and then locks by itself; Enter locks it straight away. You can see your own box (the computer can't read it), and a number typed inside the 3 s still counts at the buzzer. The clicker keys work too.
+- **VS Computer on a keyboard:** just type the number. 3 to 9 and 0 lock at once. 10 to 20 lock at the second digit. A lone 1 or 2 waits 0.8 s for a second digit and then locks by itself; Enter locks it straight away. You can type it while you're still counting: that answers early. You can see your own box (the computer can't read it), and a number typed inside the time still counts at the buzzer. The clicker keys work too.
 - **Touch (iPad or phone):** when the binoculars shut, each player gets a 0–20 pad on their own side. One tap locks that number. Your power button sits under your binoculars (in the corner when the phone stands up), with your brother's face button next to it; the high-five button sits on the fence.
 - **Mouse:** the number pads can be clicked as well.
 - **Menus:** Enter plays, C opens characters, S opens settings. On setup, 1 picks two players, 2 picks VS Computer, Enter starts and Esc goes back. Enter plays again after the final score.
 
-### Why these inputs (the 3-second window)
+### The answer time: 30 s, and answering early (Alan's changes)
 
-Teddy's rule 4 gives three seconds to answer, and that is very short for typing. So every input is one or two presses:
+Teddy's rule 4 gave three seconds to answer. After playing it, Alan made two changes:
+
+- **30 seconds** to answer instead of 3 (`answerTimeSeconds` and `SPOT.RULES.answerSeconds`, both 30). The check fails if they disagree. Set both back to 3 for Teddy's original way.
+- **Answer early, whenever you're sure**, with ✋ READY, your lock key, or (VS Computer) just typing the number while still counting. You get the same 30 s from that moment.
+  - The count is still 60 / 30 / 15 s at most (rule 3), and both players count at the same time (rule 5).
+  - Whoever answers early simply stops watching; the other player keeps their whole count.
+  - The round only moves on when everyone has answered, so nobody is cut short.
+
+The inputs were built for the short window, and they still make answering quick:
 
 - On touch, one tap on a big ordered 0–20 pad.
 - Against the computer, one or two digit keys with no Enter needed.
-- For two players sharing a keyboard, the count is built *during* the observation with a clicker (like a real wildlife counter), so the 3 s only needs one key to lock it.
-
-The 3 s itself is unchanged. If it turns out too short for Tommy, that's a question for Teddy, not a quiet change here (it's `answerTimeSeconds`, and the check fails if it isn't 3).
+- For two players sharing a keyboard, the count is built *during* the observation with a clicker (like a real wildlife counter), so locking it is one key.
 
 ### Hidden answers on one screen (and what it can't stop)
 
-The screen only ever reads `match.view()`, which hides every answer and every count until both answers are locked or the 3 s are up. In two players the boxes show ●●; once you lock, you see ✓ LOCKED and "hidden until both are in".
+The screen only ever reads `match.view()`, which hides every answer and every count until both answers are locked or the time is up. In two players the boxes show ●●; once you lock, you see ✓ LOCKED and "hidden until both are in".
 
 Honestly, though, one shared screen or keyboard can't stop a determined peek:
 
@@ -106,7 +114,7 @@ It doesn't help much, because the two fields always have different counts. Separ
 - **Scoring:**
   - A right answer against a wrong one wins the round.
   - Both right is a draw (rule 18). Both wrong is a draw for now.
-  - No answer within the 3 s never counts, even if your clicker happened to be right.
+  - No answer within the 30 s never counts, even if your clicker happened to be right.
   - A point per round won. Equal points after five rounds is a draw.
 - **The computer (VS Computer):** it has its own field, timer, character and powers (CPU Tommy freezes, and the CPU pilot calls the helicopter at night). It counts only its own field and is right 60% / 75% / 90% of the time on easy / medium / hard, nudged slightly by its powers and by the dark. Otherwise it's off by one or two. It answers 0.7 to 2.1 s into the window, and its answer stays hidden until yours is in. It never sees your count: the check proves its answers don't change when only your field changes.
 - **Characters and unlocks:**
@@ -120,7 +128,7 @@ It doesn't help much, because the two fields always have different counts. Separ
 
 ## Call your brother (companion mode)
 
-The series' companion, added at Alan's request (every family game has one). It isn't in Teddy's document, so it lives apart from his rules in `CONFIG.companion`, and it never bends them: everything it does happens in your own field, inside the 3 s.
+The series' companion, added at Alan's request (every family game has one). It isn't in Teddy's document, so it lives apart from his rules in `CONFIG.companion`, and it never bends them: everything it does happens in your own field, inside the answer time.
 
 ![Teddy spots the sheep hiding outside Tommy's binoculars](docs/companion.jpg)
 
@@ -132,7 +140,7 @@ The series' companion, added at Alan's request (every family game has one). It i
 - **He spots for you, for about 10 s:** he looks through his own binoculars into *your* field, and puts a yellow arrow on your lens rim for every one of your animals hiding outside it, pointing where it is ("👀 TOMMY IS SPOTTING!"). You still can't see them, so you still have to count them: the arrows just say they're there.
 - **He has your back, once per visit.** If he's there when the binoculars shut, then:
   - **a wrong answer** becomes the right one;
-  - **no answer** with 0.6 s left: he shouts the right number for you, inside the 3 s.
+  - **no answer** with 0.6 s left: he shouts the right number for you, inside the answer time. (With 30 s to answer, call him during the answer time if you want him there at the end.)
 
   Either way: **"TOMMY SAVED YOU!"** pops up, his window comes back with his hello move, and the stamp and table show it ("9 → 8 🛡️ Saved!"). The 🛡️ on his button and bar greys out once he's used it.
 - **His time bar:** the bar with his face next to your card shows the time left, and so does the ring around his button.
@@ -166,6 +174,8 @@ The series' companion, added at Alan's request (every family game has one). It i
 
 His document's Part 14, with what this build does for now. Everything here is a configurable default in `js/config.js`, not a rule.
 
+Alan also changed two things after playing, so they're questions for Teddy too: **30 seconds to answer** instead of his 3 (rule 4), and **answering early** whenever you're sure (see "The answer time" above). Both are one setting each to put back.
+
 | Question | His document says | What this build does (proposal) | Where to change it |
 |---|---|---|---|
 | Begin with one character or five? | He suggested both | Two: Teddy and Tommy | `roster.start` |
@@ -192,7 +202,7 @@ Other proposals of mine, all in `js/config.js`:
   - uses a ready power after 1.5–6 s (`cpu.powerWait`).
 - **The answer window:**
   - A typed 1 or 2 waits 0.8 s for a second digit (`timing.typedConfirm`).
-  - The 3 s ends early once both answers are locked (`timing.endAnswerWhenBothLocked`); it never runs longer.
+  - The answer time ends early once both answers are locked (`timing.endAnswerWhenBothLocked`); it never runs longer. Answering early ends the count too, once every player has answered.
 - **The 🌗 MIX sky:** half the rounds are night (`sky.mixNightChance`).
 - **Scoring:** a point per round won and none for a draw (the document's proposed scoring, `scoring`).
 - **Your brother** (Alan's series feature, `companion`): visits last 10 s; he spots your hiding animals; one save per visit, shouting the number with 0.6 s left; the two-player high five gives both players 5 s of spotting and rests 20 s (12 s on easy).
@@ -209,11 +219,11 @@ node tools/check.js
 node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --hard] [--day | --night | --mix]
 ```
 
-- **Rules (117 checks in 14 groups):**
-  - **Teddy's rules in the config:** 5 rounds, 60/30/15 s, 3 s, at most 20, zero rare, a freeze cooldown, Teddy's bigger binoculars.
+- **Rules (125 checks in 15 groups):**
+  - **Teddy's rules in the config:** 5 rounds, 60/30/15 s, the answer time (30 s, Alan's change), at most 20, zero rare, a freeze cooldown, Teddy's bigger binoculars.
   - **Timing on every difficulty, two players and VS Computer:**
     - the observation lasts exactly 60 / 30 / 15 s;
-    - the answer window lasts exactly 3 s, ends early once both are locked, and never stretches;
+    - the answer time lasts exactly 30 s, ends early once both are locked, and never stretches;
     - 3-2-1-GO and 5-4-3-2-1 come at the right moments;
     - powers and clicks never stop the clock.
   - **Answers:** 0 to 20 whole numbers only, locked answers can't change, the clicker stops at 0 and 20, typing 7 / 17 / 20 / a lone 2, and a 1 typed just before the buzzer.
@@ -236,7 +246,7 @@ node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --h
     - It never reads your count: in 40 matches, changing only your field never changed its answers, its timing or its powers.
     - It is handed only its own count, character, difficulty and sky.
     - With the nudges off it's right 60/75/90% (±4.5%) over 1,500 rounds each.
-    - It always answers within the 3 s.
+    - It always answers within the answer time.
     - CPU Tommy freezes, the CPU pilot flies at night and never tries in the day.
   - **Unlocks:**
     - you start with Teddy and Tommy;
@@ -249,10 +259,16 @@ node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --h
     - hello, a treat that lands, a 10 s visit, goodbye;
     - calling again brings another hello and treat, the whole visit and the save again, and never a second brother;
     - he spots exactly your animals hiding outside your lenses, never the computer's;
-    - a wrong answer while he's there becomes right; no answer, and he shouts the number inside the 3 s; a right answer keeps his save; without him, no save; one save per visit; called too early in a long round, he's gone by the answer;
+    - a wrong answer while he's there becomes right; no answer, and he shouts the number inside the answer time; a right answer keeps his save; without him, no save; one save per visit; called too early in a long round, he's gone by the answer;
     - two players: T is a high five (only while counting), both spot their own field for 5 s, a treat each, then a 20 s rest (12 s on easy), and it works again after;
     - calling him never changes the computer's answers.
-- **Sabotage (37 broken setups, all must be caught).** These prove the checks can fail:
+  - **Answering early (8 checks):**
+    - VS Computer: typing your number while counting shuts your binoculars and goes straight to the reveal (about 2 s later, with most of the count left);
+    - two players: locking early shuts only your binoculars, your answer stays hidden, and the other player still gets the whole count, then the usual answer time;
+    - both ready early: straight to the reveal;
+    - said ready but no answer in 30 s: no credit, and the other player keeps counting; the round ends as soon as they answer;
+    - answering early never changes what the computer answers (its power dice and answer dice are separate).
+- **Sabotage (41 broken setups, all must be caught).** These prove the checks can fail:
   - a config with 4 rounds, 20 s on hard, 5 s to answer, 25 animals, or no freeze cooldown;
   - a game whose answer window really is 5 s, or whose hard round really is 20 s;
   - a game of four rounds;
@@ -267,22 +283,24 @@ node tools/check.js --soak --matches=200 [--2p | --cpu] [--easy | --medium | --h
   - both right going to player 1;
   - a clicker number counting without being locked;
   - unlocks that count the computer's wins;
-  - a brother who saves you when he isn't there, never leaves, saves every time, answers after the 3 s, spots the computer's field too, or uses the computer's dice for his treats;
-  - a high five that only helps player 1, or one with no rest.
+  - a brother who saves you when he isn't there, never leaves, saves every time, answers after the time is up, spots the computer's field too, or uses the computer's dice for his treats;
+  - a high five that only helps player 1, or one with no rest;
+  - an early answer that ends the count for both players, an early answer time that never runs out, an early answer that shows before both are in, or the computer's powers using its answer dice.
 - **Soak:** whole matches with movement:
   - half two players and half VS Computer, on every difficulty and sky, with random characters;
   - little bots press powers and clickers, call their brother or high-five, and answer at random moments (some too late, some wrong);
   - every tick checks the phase order, 5 rounds, the counts and types, animals inside the field, a frozen or lit field only with its own power, no answer or count on screen before the reveal, a visiting brother only in VS Computer, spotting only for your own field and only while counting, every save right and only for you, and the final score adding up.
 - **Last run:**
-  - Rules 117 of 117, sabotage 37 of 37 caught.
-  - Soak: 200 of 200 matches finished, 1,000 rounds, 2.6 million ticks, no problems (about 80 s). 9 zero rounds (0.9%). The bots called their brother (or tried a high five) 6,944 times; he saved 201 answers, all of them right and all for the human.
-  - The computer was right 57% / 75% / 90% on easy / medium / hard. The soak keeps its night and power nudges on, which pulls easy a little below 60%.
-  - On average the pilot and Tommy each saw 81% of their own animals at any moment; Teddy saw 100%. The closest two animals ever got was 0.89 of their room.
+  - Rules 125 of 125, sabotage 41 of 41 caught.
+  - Soak: 200 of 200 matches finished, 1,000 rounds, 1.3 million ticks, no problems (about 35 s; rounds are shorter now that the bots sometimes answer early). 9 zero rounds (0.9%). The bots called their brother (or tried a high five) 2,857 times; he saved 107 answers, all of them right and all for the human.
+  - The computer was right 57% / 71% / 89% on easy / medium / hard (195 / 100 / 205 rounds). The soak keeps its night and power nudges on, which pulls easy a little below 60%.
+  - On average the pilot saw 80% and Tommy 78% of their own animals at any moment; Teddy saw 100%. The closest two animals ever got was 0.90 of their room.
 - **In the Browser pane** (served from `~/claude-games` on port 8766), no console messages. Checked:
   - every screen at 1200 × 750 and 800 × 500;
   - phone landscape 740 × 360 and iPad 1024 × 768 with `?touch=1`, and phone portrait 390 × 844;
   - real key presses (two-player clickers and locks) and a real tap on the number pad;
   - 中文 on every screen, through a whole match, with `Kit.lang.untranslated()` coming back empty (also through the companion's hello, treat, spotting, saves, the high five and its rest);
+  - answering early at 1200 × 750: D while counting opens your box with its own 30 s, a real click on the pad locks it and goes straight to the reveal; two players, one locked early while the other kept counting;
   - the companion at 1200 × 750, 740 × 360 and 390 × 844: the fence window, the call button beside the power button, the arrows, a save at the reveal, a last-moment shout, and the high five (centred on the fence when the phone stands up, so it covers both views the same).
 - **Real frames:** a copy of the single page ran with a timer-driven `requestAnimationFrame` (in the gitignored `.claude/`).
   - A hard round's observation took 15.00 s of real time, and the answer window 3.00 s.
@@ -345,7 +363,7 @@ These are written here first. They're worth moving into `~/claude-games/kit` if 
 - **Sound:** every effect is wired up, but nobody listened in this build. The test browser has no audio check.
 - **Real touch devices:** touch was tested in the Browser pane with simulated taps, at phone landscape, phone portrait and iPad sizes with `?touch=1`. It wasn't tried on a real iPhone or iPad.
 - **Two kids on one keyboard:** the key layout (WASD against the arrows, both clickers) was pressed by a script, not by two real players side by side.
-- **Whether 3 s is enough for Tommy** to tap or type his number, and whether counting 20 moving animals in 15 s is fun or just hard. The numbers in `js/config.js` are there to tune after the brothers try it.
+- **Whether 30 s and answering early feel right** (Alan's changes), and whether counting 20 moving animals in 15 s is fun or just hard. The numbers in `js/config.js` are there to tune after the brothers try it.
 - **Night difficulty:** the dark is a guess. It may be too easy or too hard to see the brown hens and red roosters.
 - **The companion's feel:** whether the spotting arrows are too much help, whether 10 s is the right visit, and whether the save makes VS Computer too easy for Teddy (he can simply not call his brother). It's all in `CONFIG.companion`.
 - **Long real-time sessions:** most play was driven with `game.step()`. The real-frames copy ran one full round and a second round with the ? panel open.

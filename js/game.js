@@ -545,7 +545,7 @@
     else { lbl = 'COUNT'; num = '✓'; }
     setHtml($('clockLbl'), lbl);
     setHtml($('clockNum'), num);
-    setCls(clock, 'hurry', v.phase === 'observe' && v.timeLeft <= SPOT.RULES.finalCountdown);
+    setCls(clock, 'hurry', (v.phase === 'observe' || v.phase === 'answer') && v.timeLeft <= SPOT.RULES.finalCountdown);
     setCls(clock, 'asking', v.phase === 'answer');
     const an = ANIMAL[v.animal];
     setHtml($('roundInfo'), `${v.sky === 'night' ? '🌙 NIGHT' : '☀️ DAY'} · ${an.emoji} ${an.many} · ${DIFF[v.difficulty]}`);
@@ -597,26 +597,32 @@
       const clk = $('clk' + i);
       setCls(clk, 'bump', st.time - clickBump[i] < 0.12);
       clk.style.visibility = (v.phase === 'observe' || v.phase === 'answer') && !p.locked ? 'visible' : 'hidden';
-      // the answer box
+      // I'm ready: answer while still counting (your binoculars shut, your own answer time starts)
+      setCls($('rdy' + i), 'hidden', !(v.phase === 'observe' && p.human && !p.early && !p.locked && !p.spent));
+      // the answer box: after the count for everyone, or early for whoever said they're ready
       const ask = $('ask' + i);
-      const asking = v.phase === 'answer';
+      const asking = v.phase === 'answer' || (v.phase === 'observe' && p.early);
       setCls(ask, 'hidden', !asking);
       if (asking) {
         setHtml(ask.querySelector('.q'), `HOW MANY ${an.many}?`);
         const box = ask.querySelector('.ansbox');
         let txt, bc = '';
         if (p.locked) { txt = '✓ LOCKED'; bc = 'locked'; }
+        else if (p.spent) { txt = '⏰'; bc = 'cpu'; }
         else if (!p.human) { txt = '🤖 …'; bc = 'cpu'; }
         else if (S.mode === '2p') { txt = '●●'; bc = 'masked'; }
         else txt = p.entry === null ? '?' : `${p.entry}${p.pending ? '_' : ''}`;
         setHtml(box, txt);
         box.className = 'ansbox ' + bc;
-        setHtml(ask.querySelector('.left b'), String(Math.max(0, Math.ceil(v.timeLeft - 1e-9))));
+        setHtml(ask.querySelector('.left b'), String(Math.max(0, Math.ceil((p.answerLeft === null ? v.timeLeft : p.answerLeft) - 1e-9))));
+        ask.querySelector('.left').style.visibility = p.locked || p.spent ? 'hidden' : '';
         const grid = ask.querySelector('.grid');
-        setCls(grid, 'hidden', !p.human || p.locked);
+        setCls(grid, 'hidden', !p.human || p.locked || p.spent);
         if (S.mode === 'cpu' && p.human) grids[i].forEach((b, n) => setCls(b, 'sel', p.entry === n));
         let hint;
         if (!p.human) hint = p.locked ? 'the computer has answered' : 'the computer is thinking';
+        else if (p.spent) hint = 'too slow this time!';
+        else if (p.locked && S.mode === '2p' && v.phase === 'observe') hint = 'locked! the other player is still counting';
         else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : st.shouted ? `🛡️ ${nameOf(v.buddy ? v.buddy.kind : 'tommy')} ANSWERED FOR YOU!` : 'locked in!';
         else if (isTouch) hint = 'tap your number';
         else if (S.mode === '2p') hint = i ? '↑ ↓ to fix your count · → or Enter to lock' : 'W S to fix your count · D or Space to lock';
@@ -724,6 +730,8 @@
       case 'go': banner('GO!', 0.8, 'num go'); SFX.go(); SFX.lens(); st.lensTarget = [1, 1]; st.ambientT = 2 + Math.random() * 3; break;
       case 'final': SFX.tick(e.n); break;
       case 'answer': st.lensTarget = [0, 0]; SFX.shut(); break;
+      case 'ready': st.lensTarget[i] = 0; SFX.shut(); break;
+      case 'spent': if (S.players[i].human) { ptoast(i, '⏰ TOO SLOW!', 'no', 1.6); SFX.nope(); } break;
       case 'power': {
         const P = S.players[i];
         if (e.kind === 'freeze') { SFX.freeze(); ptoast(i, '❄️ FREEZE!', 'ice'); }
@@ -826,7 +834,7 @@
       if (act === 'up') S.adjust(i, 1);
       else if (act === 'down') S.adjust(i, -1);
       else if (act === 'power') usePower(i);
-      else if (act === 'lock') S.lock(i);
+      else if (act === 'lock') S.lockNow(i); // while counting: I'm ready (and locks a clicker count)
       else if (act === 'action') { if (S.phase === 'answer') S.lock(i); else usePower(i); }
       return;
     }
@@ -871,6 +879,18 @@
     });
   });
   $('nextBtn').addEventListener('click', next);
+  [0, 1].forEach((i) => {
+    const el = $('rdy' + i);
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      firstGesture();
+      el.classList.add('down');
+      setTimeout(() => el.classList.remove('down'), 120);
+      const S = st.match;
+      if (st.mode === 'match' && S && S.players[i].human) S.lockNow(i);
+    });
+  });
   // your brother: VS Computer calls him (as often as you like), two players high-five
   function callBuddy() {
     const S = st.match;
@@ -1282,7 +1302,7 @@
       return {
         screen: st.mode, phase: v && v.phase, round: v && v.round, sky: v && v.sky, animal: v && v.animal,
         timeLeft: v && +v.timeLeft.toFixed(2), scores: v && v.scores,
-        players: v && v.players.map((p, i) => ({ char: p.char, human: p.human, lens: +p.lens.toFixed(2), frozen: p.frozen, lit: p.lit, locked: p.locked, entry: p.entry, answer: p.answer, count: p.count, power: { kind: p.power.kind, active: p.power.active, cool: +p.power.coolLeft.toFixed(1), ready: p.power.ready }, visible: S.visibleCount(i) })),
+        players: v && v.players.map((p, i) => ({ char: p.char, human: p.human, lens: +p.lens.toFixed(2), frozen: p.frozen, lit: p.lit, locked: p.locked, early: p.early, spent: p.spent, entry: p.entry, answer: p.answer, count: p.count, power: { kind: p.power.kind, active: p.power.active, cool: +p.power.coolLeft.toFixed(1), ready: p.power.ready }, visible: S.visibleCount(i) })),
         result: v && v.result, final: v && v.final, progress: prog, buddy: v && v.buddy, cheer: v && v.cheer,
         spotted: S ? [0, 1].map((i) => S.spotted(i).length) : null,
       };
@@ -1296,6 +1316,8 @@
     type(i, d) { return st.match && st.match.typeDigit(i, d); },
     adjust(i, d) { return st.match && st.match.adjust(i, d); },
     lock(i) { return st.match && st.match.lock(i); },
+    ready(i = 0) { return st.match && st.match.ready(i); },
+    lockNow(i = 0) { return st.match && st.match.lockNow(i); },
     next() { const S = st.match; if (S && st.reveal) st.reveal.stamped = true; if (S && S.phase === 'result') { S.next(); game.step(DT); } return game.state(); },
     // jump to the last `left` seconds of the observation (default: the end)
     skip(left = 0.02) { const S = st.match; if (S && S.phase === 'ready') S.phaseT = 99; if (S) S.step(DT); if (S && S.phase === 'observe') S.phaseT = Math.max(S.phaseT, S.observeT - left); return game.state(); },

@@ -31,7 +31,7 @@
     const ok = (name, cond, info) => out.push({ name, ok: !!cond, info: info || '' });
     ok('rule 2: five rounds per game', C.roundsPerGame === R.roundsPerGame && R.roundsPerGame === 5, `config ${C.roundsPerGame}`);
     ok('rule 3: observation is 60 / 30 / 15 s', ['easy', 'medium', 'hard'].every((d) => C.difficulty[d] === R.observeSeconds[d]) && R.observeSeconds.easy === 60 && R.observeSeconds.medium === 30 && R.observeSeconds.hard === 15, JSON.stringify(C.difficulty));
-    ok('rule 4: three seconds to answer', C.answerTimeSeconds === R.answerSeconds && R.answerSeconds === 3, `config ${C.answerTimeSeconds}`);
+    ok(`rule 4: ${R.answerSeconds} s to answer (Alan's change; Teddy's document said 3)`, C.answerTimeSeconds === R.answerSeconds && R.answerSeconds === 30, `config ${C.answerTimeSeconds}`);
     ok('rule 8: never more than 20 animals', C.animals.max <= R.maxAnimals && R.maxAnimals === 20 && C.animals.min >= 1, `min ${C.animals.min}, max ${C.animals.max}`);
     ok('rule 9: zero is possible but extremely rare (at most 5% of rounds)', C.animals.allowRareZero && C.animals.zeroProbability > 0 && C.animals.zeroProbability <= 0.05, `${C.animals.zeroProbability}`);
     ok('rule 13: Tommy Freeze has a cooldown', C.characters.tommy.cooldownSeconds > 0 && C.characters.tommy.freezeDurationSeconds > 0, `${C.characters.tommy.freezeDurationSeconds} s, cooldown ${C.characters.tommy.cooldownSeconds} s`);
@@ -61,7 +61,7 @@
         });
         const obs = tAns - tGo, ans = tRev - tAns;
         ok(`${d} ${mode}: observation lasts ${R.observeSeconds[d]} s`, tGo !== null && near(obs, R.observeSeconds[d]), `${obs.toFixed(3)} s`);
-        ok(`${d} ${mode}: the answer window is 3 s when ${mode === 'cpu' ? 'you' : 'nobody'} answer${mode === 'cpu' ? '' : 's'}`, near(ans, R.answerSeconds), `${ans.toFixed(3)} s`);
+        ok(`${d} ${mode}: the answer time is ${R.answerSeconds} s when ${mode === 'cpu' ? 'you' : 'nobody'} answer${mode === 'cpu' ? '' : 's'}`, near(ans, R.answerSeconds), `${ans.toFixed(3)} s`);
         if (mode === '2p') {
           ok(`${d}: ROUND 1 OF 5, then 3, 2, 1, GO!`, counts.join() === '3,2,1' && tGo !== null, counts.join());
           ok(`${d}: 5 4 3 2 1 over the last five seconds`, finals.map((f) => f[0]).join() === '5,4,3,2,1' && finals.every(([n, t]) => near(tAns - t, n)), finals.map(([n, t]) => `${n}@${(tAns - t).toFixed(2)}`).join(' '));
@@ -81,7 +81,7 @@
     const t1 = m.t;
     m.pick(0, 5);
     stepUntil(m, (x) => x.phase === 'result');
-    ok('one answer in: the other still gets the whole 3 s, and not a tick more', near(m.t - t1, R.answerSeconds), `${(m.t - t1).toFixed(3)} s`);
+    ok(`one answer in: the other still gets the whole ${R.answerSeconds} s, and not a tick more`, near(m.t - t1, R.answerSeconds), `${(m.t - t1).toFixed(3)} s`);
     // the clock keeps running however much you press
     m = mk(env, { mode: '2p', difficulty: 'hard', seed: 13, chars: ['tommy', 'tommy'] });
     stepUntil(m, (x) => x.phase === 'observe');
@@ -123,7 +123,7 @@
     ok('typing just 2 locks 2 after a short wait for a second digit', m.players[0].ans.value === 2 && m.players[0].ans.at < 1.5, `locked at ${m.players[0].ans.at && m.players[0].ans.at.toFixed(2)} s`);
     m = mk(env, { mode: 'cpu', seed: 22 });
     stepUntil(m, (x) => x.phase === 'answer');
-    stepUntil(m, (x) => x.phaseT >= 2.8);
+    stepUntil(m, (x) => x.phaseT >= x.answerT - 0.2);
     m.typeDigit(0, 1);
     stepUntil(m, (x) => x.phase === 'result', 2);
     ok('a 1 typed just before the buzzer still counts', m.results[0].answers[0] === 1);
@@ -424,7 +424,7 @@
           const r = y.results[y.results.length - 1], A = y.players[1].ans;
           rounds++;
           if (r.correct[1]) right++;
-          if (!A.locked || A.at > 3 || !(r.answers[1] >= 0 && r.answers[1] <= 20)) bad++;
+          if (!A.locked || A.at > SPOT.RULES.answerSeconds || !(r.answers[1] >= 0 && r.answers[1] <= 20)) bad++;
           y.next();
         });
       }
@@ -437,7 +437,7 @@
       allBad += res.bad;
       ok(`${d}: right about ${Math.round(acc[d] * 100)}% of the time (proposal)`, Math.abs(res.rate - acc[d]) < 0.045, `${(res.rate * 100).toFixed(1)}% of ${res.rounds} rounds`);
     }
-    ok('it always answers inside the 3 s, with a number from 0 to 20', allBad === 0, `${allBad} bad`);
+    ok(`it always answers inside the ${SPOT.RULES.answerSeconds} s, with a number from 0 to 20`, allBad === 0, `${allBad} bad`);
     const nudged = measure(env.cfg, 'medium', ['tommy', 'teddy'], 'day', 200);
     ok('with its own power nudges on, it stays close to its difficulty', Math.abs(nudged.rate - (acc.medium + env.cfg.cpu.mods.wideView)) < 0.06, `CPU Teddy on medium: ${(nudged.rate * 100).toFixed(1)}%`);
     // it uses its powers like a player: freeze, the helicopter at night, never the helicopter in the day
@@ -538,19 +538,21 @@
     const saveRound = (how, call = true) => {
       const x = mk(env, { mode: 'cpu', seed: 84, difficulty: 'hard' });
       stepUntil(x, (y) => y.phase === 'observe' && y.observeT - y.phaseT < 4);
-      if (call) x.callBuddy();
+      if (call && how !== 'none') x.callBuddy();
       toAnswer(x);
+      // with nothing answered he can only shout if he's there at the end, so for that case call him late in the answer time
+      if (call && how === 'none') { stepUntil(x, (y) => y.phaseT >= y.answerT - 5); x.callBuddy(); }
       const c = x.players[0].field.count;
       if (how === 'wrong') { stepUntil(x, (y) => y.phaseT > 0.4); x.pick(0, wrongFor(c)); }
       if (how === 'right') { stepUntil(x, (y) => y.phaseT > 0.4); x.pick(0, c); }
       const evs = [];
-      stepUntil(x, (y) => y.phase === 'result', 4, DT, (y) => { for (const e of drain(y)) evs.push(e); });
+      stepUntil(x, (y) => y.phase === 'result', R.answerSeconds + 2, DT, (y) => { for (const e of drain(y)) evs.push(e); });
       return { x, r: x.results[0], c, evs, at: x.players[0].ans.at };
     };
     let t = saveRound('wrong');
     ok('he has your back: a wrong answer while he\'s there becomes right ("TOMMY SAVED YOU!")', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === wrongFor(t.c) && t.r.answers[0] === t.c && t.evs.some((e) => e.type === 'buddySave' && !('value' in e)));
     t = saveRound('none');
-    ok('no answer with a moment left: he shouts the number for you, inside the 3 s', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === null && t.at <= R.answerSeconds - C.shoutBefore + 0.05 && t.at >= R.answerSeconds - C.shoutBefore - 0.05, `locked at ${t.at && t.at.toFixed(2)} s`);
+    ok('no answer with a moment left: he shouts the number for you, inside the answer time', t.r.correct[0] && t.r.saved[0] && t.r.yours[0] === null && t.at <= R.answerSeconds - C.shoutBefore + 0.05 && t.at >= R.answerSeconds - C.shoutBefore - 0.05, `locked at ${t.at && t.at.toFixed(2)} s`);
     t = saveRound('right');
     ok('a right answer needs no save (and keeps his save)', t.r.correct[0] && !t.r.saved[0] && t.x.buddy && t.x.buddy.save);
     t = saveRound('wrong', false);
@@ -571,7 +573,7 @@
     toAnswer(m);
     stepUntil(m, (x) => x.phaseT > 0.4);
     m.pick(0, wrongFor(m.players[0].field.count));
-    stepUntil(m, (x) => x.phase === 'result', 4);
+    stepUntil(m, (x) => x.phase === 'result', R.answerSeconds + 2);
     ok('called at the start of a long round, he\'s gone by the answer, so no save', !m.buddy && !m.results[0].saved[0] && !m.results[0].correct[0]);
     // two players: the high five
     m = mk(env, { mode: '2p', seed: 87, difficulty: 'medium', tweakCounts: () => [20, 20] });
@@ -602,7 +604,70 @@
     return out;
   }
 
-  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy };
+  // ---------------------------------------------------------------- 15. answering early (Alan's request)
+
+  function early(env) {
+    const out = [], R = SPOT.RULES;
+    const ok = (name, cond, info) => out.push({ name, ok: !!cond, info: info || '' });
+    const typeIt = (m, i, c) => { if (c >= 10) { m.typeDigit(i, Math.floor(c / 10)); m.typeDigit(i, c % 10); } else { m.typeDigit(i, c); if (c === 1 || c === 2) m.lock(i); } };
+    // VS Computer: type your number while counting and the round moves on
+    let m = mk(env, { mode: 'cpu', seed: 91, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 5);
+    const c = m.players[0].field.count, t0 = m.t;
+    drain(m);
+    typeIt(m, 0, c);
+    const shut = m.view().players[0].early;
+    const evs = [];
+    stepUntil(m, (x) => x.phase === 'result', 70, DT, (x) => evs.push(...drain(x)));
+    ok('VS Computer: type your number while counting: your binoculars shut and the round moves on (no waiting for the clock)', shut && m.phase === 'result' && m.results[0].answers[0] === c && m.t - t0 < 3 && evs.some((e) => e.type === 'answer'), `reveal ${(m.t - t0).toFixed(2)} s after answering, with ${(m.observeT - 5).toFixed(0)} s of count left`);
+    // two players: one locks early, the other keeps the whole count and the answer time
+    m = mk(env, { mode: '2p', seed: 92, difficulty: 'medium' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 3);
+    m.adjust(0, 1); m.adjust(0, 1);
+    drain(m);
+    const lk = m.lockNow(0);
+    const v = m.view(), ev1 = drain(m);
+    ok('two players: locking early shuts only your binoculars, and your answer stays hidden', lk && m.players[0].ans.locked && m.phase === 'observe' && v.players[0].early && v.players[0].locked && v.players[0].answer === null && !v.players[1].early && !ev1.some((e) => 'value' in e));
+    const p0 = m.phaseT;
+    let ticks = 0;
+    stepUntil(m, (x) => x.phase !== 'observe', 60, DT, () => ticks++);
+    ok('...and the other player still gets the whole count', near(p0 + ticks * DT, R.observeSeconds.medium), `${(p0 + ticks * DT).toFixed(2)} s`);
+    ok('...then answers in the usual time, and the early answer counts', m.phase === 'answer' && m.pick(1, 4) && (m.step(DT), m.phase === 'result') && m.results[0].answers.join() === '2,4');
+    m = mk(env, { mode: '2p', seed: 93, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 2);
+    m.lockNow(0); m.lockNow(1);
+    m.step(DT); m.step(DT);
+    ok('two players: both ready early, and it goes straight to the reveal', m.phase === 'result' && m.t < 4.4 + 3);
+    // ready, then no answer in your own answer time: no credit, and the other player keeps going
+    m = mk(env, { mode: '2p', seed: 94, difficulty: 'easy' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 2);
+    drain(m);
+    m.ready(1);
+    const tr = m.t;
+    let tSpent = null;
+    stepUntil(m, (x) => x.players[1].ans.spent, R.answerSeconds + 2, DT, (x) => { for (const e of drain(x)) if (e.type === 'spent') tSpent = e.t; });
+    ok(`said ready but no answer in ${R.answerSeconds} s: no credit, and the other player keeps counting`, m.players[1].ans.spent && !m.players[1].ans.locked && m.phase === 'observe' && !m.pick(1, 3) && near(tSpent - tr, R.answerSeconds), `${tSpent && (tSpent - tr).toFixed(2)} s`);
+    stepUntil(m, (x) => x.phase === 'answer', 70);
+    m.pick(0, m.players[0].field.count);
+    m.step(DT);
+    ok('...and the round ends as soon as the other one answers', m.phase === 'result' && m.results[0].answers[1] === null && m.results[0].correct[0]);
+    // the computer never notices when you answer
+    const play = (when) => {
+      // easy (60 s): long enough for the computer's Tommy to freeze several times, so its dice really get rolled
+      const x = mk(env, { mode: 'cpu', difficulty: 'easy', seed: 95, chars: ['teddy', 'tommy'] });
+      const ans = [];
+      stepUntil(x, (y) => y.phase === 'final', 600, 0.05, (y) => {
+        if (when === 'early' && y.phase === 'observe' && y.phaseT > 3 && y.canAnswer(0)) typeIt(y, 0, y.players[0].field.count);
+        if (when === 'late' && y.phase === 'answer' && y.canAnswer(0)) y.pick(0, y.players[0].field.count);
+        if (y.phase === 'result') { ans.push(y.results[y.results.length - 1].answers[1]); y.next(); }
+      });
+      return ans.join();
+    };
+    ok('answering early never changes what the computer answers', play('early') === play('late'));
+    return out;
+  }
+
+  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy, early };
   // a check that crashes counts as failed, never as passed
   function runCheck(k, env) {
     try { return CHECKS[k](env); } catch (e) { return [{ name: `${k} crashed: ${e && e.message}`, ok: false, info: String(e && e.stack || e).split('\n')[1] || '' }]; }
@@ -640,11 +705,19 @@
           if (!P.human) continue;
           const i = P.i;
           if (m.phase === 'observe' || m.phase === 'answer') if (rng() < 0.003 && i === 0) { m.callBuddy(); st.calls++; }
+          if (m.phase === 'observe' && rng() < 0.0015 && P.ans.early === null) {
+            // now and then a bot is sure early: it answers while still counting
+            const c = P.field.count, v = rng() < 0.75 ? c : Math.max(0, Math.min(20, c + Math.round((rng() - 0.5) * 6)));
+            if (m.mode === '2p') { for (let g = 0; g < 25 && (P.ans.draft || 0) < v; g++) m.adjust(i, 1); m.lockNow(i); }
+            else if (rng() < 0.5) { m.ready(i); if (rng() < 0.9) m.pick(i, v); }
+            else { if (v >= 10) m.typeDigit(i, Math.floor(v / 10)); m.typeDigit(i, v % 10); if (v === 1 || v === 2) m.lock(i); }
+          }
+          if (m.phase === 'answer' && P.ans.early !== null) plan[i] = { at: 1e9 };
           if (m.phase === 'observe') {
             if (rng() < 0.004) m.usePower(i);
             if (m.mode === '2p' && rng() < 0.01) m.adjust(i, rng() < 0.85 ? 1 : -1);
           } else if (m.phase === 'answer' && !P.ans.locked) {
-            if (!plan[i]) plan[i] = { at: rng() * 3.6, how: pick(['pick', 'type', 'click']) };
+            if (!plan[i]) plan[i] = { at: rng() * m.answerT * 1.2, how: pick(['pick', 'type', 'click']) };
             if (m.phaseT >= plan[i].at) {
               const c = P.field.count, v = rng() < 0.75 ? c : Math.max(0, Math.min(20, c + Math.round((rng() - 0.5) * 6)));
               if (plan[i].how === 'pick') m.pick(i, v);
@@ -756,7 +829,7 @@
     run('a two-player clicker that shows its number', ['hidden'], withPatch((m) => { const vw = m.view; m.view = function () { const v = vw.call(this); v.players.forEach((p, i) => { if (!this.players[i].ans.locked) p.entry = this.players[i].ans.draft; }); return v; }; }));
     run('a computer that copies your count', ['cpu'], withPatch((m) => { m.planCpuAnswer = function (i) { const p = SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); p.value = this.players[0].field.count; return p; }; }));
     run('a computer that is always right', ['cpu'], withPatch((m) => { m.planCpuAnswer = function (i) { const p = SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); p.value = this.players[i].field.count; return p; }; }));
-    run('a computer that forgets to answer', ['cpu'], withPatch((m) => { m.planCpuAnswer = function (i) { const p = SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); p.at = 9; return p; }; }));
+    run('a computer that forgets to answer', ['cpu'], withPatch((m) => { m.planCpuAnswer = function (i) { const p = SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); p.at = this.answerT + 5; return p; }; }));
     run('both right gives the round to player 1', ['scoring'], withPatch((m) => { m.score = function (a, c) { const r = M.scoreRound(a, c, this.bothWrong); if (r.why === 'bothRight') r.winner = 0; return r; }; }));
     run('a clicker number that counts without being locked', ['scoring'], withPatch((m) => { const rv = m.reveal; m.reveal = function () { this.players.forEach((P) => { if (!P.ans.locked && P.ans.draft !== null) { P.ans.locked = true; P.ans.value = P.ans.draft; } }); rv.call(this); }; }));
     run('a brother who saves you even when he isn\'t there', ['buddy'], withPatch((m) => { m.buddyHere = () => true; const cb = m.callBuddy; m.callBuddy = function () { const r = cb.call(this); return r; }; m.buddy = { kind: 'tommy', phase: 'help', t: 0, helloT: 0, treatT: 0, treated: true, left: 1e9, visit: 10, save: true, byeT: 0 }; m.updateBuddy = function () {}; }));
@@ -767,6 +840,10 @@
     run('a high five that only helps player 1', ['buddy'], withPatch((m) => { const hf = m.highFive; m.highFive = function () { const r = hf.call(this); if (r === 'ok') this.players[1].spotT = 0; return r; }; }));
     run('a high five with no rest', ['buddy'], withPatch((m) => { const hf = m.highFive; m.highFive = function () { const r = hf.call(this); this.cheerT = 0; return r; }; }));
     run('a brother whose treats use the computer\'s dice', ['buddy'], withPatch((m) => { Object.defineProperty(m, 'rngBuddy', { get() { return this.rngCpu; }, set() {} }); }));
+    run('an early answer that ends the count for both players', ['early'], withPatch((m) => { const ln = m.lockNow; m.lockNow = function (i) { const r = ln.call(this, i); if (r && this.phase === 'observe') this.begin('answer'); return r; }; }));
+    run('an early answer time that never runs out', ['early'], withPatch((m) => { m.tickEarly = function () {}; }));
+    run('an early answer that shows before both are in', ['early'], withPatch((m) => { const vw = m.view; m.view = function () { const v = vw.call(this); v.players.forEach((p, i) => { if (this.players[i].ans.early !== null) p.answer = this.players[i].ans.value; }); return v; }; }));
+    run('the computer\'s powers using its answer dice', ['early'], withPatch((m) => { m.planCpuPower = function (i) { return SPOT.brain.powerWait(this.cpuView(i), this.cfg, this.rngCpu); }; }));
     run('unlocks that count the computer\'s wins', ['unlocks'], Object.assign(base(), { progress: Object.assign({}, M.progress, { record(p, cfg, final, mode) { const won = final.winner !== null; p.games++; if (won) p.wins++; const newly = []; for (const u of cfg.roster.unlocks) if (p.wins >= u.wins && !M.progress.has(p, cfg, u.id)) { p.unlocked.push(u.id); newly.push(u.id); } return { humanWon: won, newly }; } }) }));
     void env0;
     return cases;

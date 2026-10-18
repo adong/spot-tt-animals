@@ -1,10 +1,12 @@
 /* Spot TT Animals: the rules. A match is five rounds; each round goes
-     ready (ROUND n OF 5, 3 2 1 GO!) -> observe (60 / 30 / 15 s) -> answer (3 s) -> result,
+     ready (ROUND n OF 5, 3 2 1 GO!) -> observe (60 / 30 / 15 s) -> answer (30 s: Alan's change, Teddy's document said 3) -> result,
    and after the fifth result, final. Every player has their own field, animals, binoculars, power and answer box.
    No Three.js in here: the browser game (js/game.js) and the Node check (tools/check.js) run the same code at a
    fixed 60 ticks a second. All the numbers come from js/config.js.
 
-   The screen only ever reads match.view(), which keeps every answer hidden until both are locked (or the 3 s are up).
+   Anyone can answer early, while still counting: their own binoculars shut and their own answer time starts at once,
+   and the round moves on as soon as every player is done (so nobody waits out the clock once they're sure).
+   The screen only ever reads match.view(), which keeps every answer hidden until both are locked (or the time is up).
    The computer player only ever reads match.cpuView(i): its own field, nothing of yours. */
 (function () {
   'use strict';
@@ -180,7 +182,8 @@
       this.still = !!o.still;
       this.autoNext = o.autoNext || 0;
       this.rngRound = makeRng(this.seed ^ 0x9e3779b9);
-      this.rngCpu = makeRng(this.seed ^ 0x85ebca6b);
+      this.rngCpu = makeRng(this.seed ^ 0x85ebca6b); // the computer's answers
+      this.rngCpuPow = makeRng(this.seed ^ 0xc2b2ae35); // ...and its powers, apart, so the round's length never changes its answers
       this.rngBuddy = makeRng(this.seed ^ 0x27d4eb2f); // the companion's own dice, so calling him never changes the computer
       this.buddyFor = o.buddyFor || ((id) => (id === 'tommy' ? 'teddy' : 'tommy'));
       this.buddy = null; // VS Computer: your brother, while he's visiting
@@ -244,7 +247,9 @@
     makeField(type, count, P) { return makeField(this.cfg, type, count, P.rngField); }
     freshAnswer() {
       // two players share the keyboard with hidden clickers that start at 0; alone you type (or tap) a number
-      return { draft: this.mode === '2p' ? 0 : null, typed: null, pendT: 0, locked: false, value: null, at: null, how: null, saved: false, yours: null };
+      // early: when this player said they were ready during the count (their own answer time starts then); spent: that
+      // time ran out with no answer
+      return { draft: this.mode === '2p' ? 0 : null, typed: null, pendT: 0, locked: false, value: null, at: null, how: null, saved: false, yours: null, early: null, spent: false };
     }
 
     begin(phase) {
@@ -280,24 +285,27 @@
         for (const P of this.players) if (P.spotT > 0) P.spotT = Math.max(0, P.spotT - dt);
         this.cpuObserve();
         this.moveFields(dt);
+        this.tickEarly(dt);
         const left = this.observeT - this.phaseT;
         const sec = Math.ceil(left - 1e-9);
         if (sec >= 1 && sec <= RULES.finalCountdown && sec !== this.lastTick) { this.lastTick = sec; this.emit('final', { n: sec }); }
-        if (left <= 1e-9) this.begin('answer');
+        // the count ends when the time is up, or as soon as every player has answered early
+        const humans = this.players.filter((P) => P.human);
+        if (left <= 1e-9 || (humans.length && humans.every((P) => this.isDone(P)))) this.begin('answer');
       } else if (this.phase === 'answer') {
         this.moveFields(dt);
         // your brother has your back: nothing typed or locked with a moment left, and he shouts the number for you
         const H = this.players[0], B = this.buddy;
-        if (this.mode === 'cpu' && cfg.companion.saves && this.buddyHere() && B.save && !H.ans.locked && H.ans.typed === null &&
+        if (this.mode === 'cpu' && cfg.companion.saves && this.buddyHere() && B.save && this.canAnswer(0) && H.ans.typed === null &&
           this.phaseT >= this.answerT - cfg.companion.shoutBefore - 1e-9) this.buddySave(0, 'answer');
         this.players.forEach((P, i) => {
           const A = P.ans;
-          if (A.locked) return;
+          if (A.locked || A.spent) return;
           if (!P.human && this.cpuPlans[i] && this.phaseT >= this.cpuPlans[i].at) this.lockValue(i, this.cpuPlans[i].value, 'cpu');
           else if (A.pendT > 0) { A.pendT -= dt; if (A.pendT <= 0) this.lockValue(i, A.typed, 'typed'); }
         });
-        const both = this.players.every((P) => P.ans.locked);
-        if ((both && cfg.timing.endAnswerWhenBothLocked) || this.phaseT >= this.answerT - 1e-9) this.reveal();
+        const done = this.players.every((P) => this.isDone(P));
+        if ((done && cfg.timing.endAnswerWhenBothLocked) || this.phaseT >= this.answerT - 1e-9) this.reveal();
       } else if (this.phase === 'result') {
         if (this.autoNext && this.phaseT >= this.autoNext) this.next();
       }
@@ -362,7 +370,7 @@
       };
     }
     planCpuAnswer(i) { return SPOT.brain.planAnswer(this.cpuView(i), this.cfg, this.rngCpu); }
-    planCpuPower(i) { return SPOT.brain.powerWait(this.cpuView(i), this.cfg, this.rngCpu); }
+    planCpuPower(i) { return SPOT.brain.powerWait(this.cpuView(i), this.cfg, this.rngCpuPow); }
     cpuObserve() {
       for (const P of this.players) {
         const pw = P.power;
@@ -377,7 +385,43 @@
     //      One player: type the number (3-9 and 0 lock at once; 1 and 2 wait a moment for a second digit).
     //      Touch: tap a number from 0 to 20, which locks it. Locked answers can't change.
 
-    canAnswer(i) { const P = this.players[i]; return P && P.human && !P.ans.locked; }
+    canAnswer(i) { const P = this.players[i]; return !!P && P.human && !P.ans.locked && !P.ans.spent; }
+    isDone(P) { return P.ans.locked || P.ans.spent; }
+    // answering now: in the answer time after the count, or early, once you've said you're ready
+    answering(i) { return this.phase === 'answer' || (this.phase === 'observe' && this.players[i].ans.early !== null); }
+    // ---- answering early (Alan's request): "I'm ready!" while counting. Your binoculars shut and your own answer time
+    //      (the same length as the one after the count) starts now; the other player keeps counting.
+    ready(i) {
+      const A = this.players[i] && this.players[i].ans;
+      if (!this.canAnswer(i) || this.phase !== 'observe' || A.early !== null) return false;
+      A.early = this.phaseT;
+      this.emit('ready', { i });
+      return true;
+    }
+    // the lock key: while counting it says you're ready (and locks your clicker count if you have one)
+    lockNow(i) {
+      const A = this.players[i] && this.players[i].ans;
+      if (!A) return false;
+      if (this.phase === 'observe' && A.early === null && !this.ready(i)) return false;
+      if (A.typed === null && A.draft === null) return this.answering(i); // alone with nothing typed: the box is open, type it
+      return this.lock(i);
+    }
+    // your own answer time, while the count goes on for the others
+    tickEarly(dt) {
+      const cfg = this.cfg;
+      this.players.forEach((P, i) => {
+        const A = P.ans;
+        if (!P.human || A.early === null || this.isDone(P)) return;
+        const e = this.phaseT - A.early;
+        if (A.pendT > 0) { A.pendT -= dt; if (A.pendT <= 0) { this.lockValue(i, A.typed, 'typed'); return; } }
+        if (i === 0 && this.mode === 'cpu' && cfg.companion.saves && this.buddyHere() && this.buddy.save && A.typed === null &&
+          e >= this.answerT - cfg.companion.shoutBefore - 1e-9) { this.buddySave(0, 'answer'); return; }
+        if (e >= this.answerT - 1e-9) {
+          if (A.typed !== null) this.lockValue(i, A.typed, 'typed');
+          else { A.spent = true; this.emit('spent', { i }); }
+        }
+      });
+    }
     adjust(i, d) {
       if (!this.canAnswer(i) || (this.phase !== 'observe' && this.phase !== 'answer')) return false;
       const A = this.players[i].ans;
@@ -388,7 +432,9 @@
       return true;
     }
     typeDigit(i, d) {
-      if (!this.canAnswer(i) || this.phase !== 'answer' || !(d >= 0 && d <= 9 && Number.isInteger(d))) return false;
+      if (!this.canAnswer(i) || !(d >= 0 && d <= 9 && Number.isInteger(d))) return false;
+      if (this.phase === 'observe' && this.players[i].ans.early === null) this.ready(i); // typing while counting = ready
+      if (!this.answering(i)) return false;
       const A = this.players[i].ans, max = RULES.maxAnimals;
       if (A.typed !== null && A.pendT > 0 && A.typed * 10 + d <= max) return this.lockValue(i, A.typed * 10 + d, 'typed');
       A.typed = d;
@@ -407,12 +453,12 @@
       return true;
     }
     pick(i, n) {
-      if (!this.canAnswer(i) || this.phase !== 'answer') return false;
+      if (!this.canAnswer(i) || !this.answering(i)) return false;
       if (!Number.isInteger(n) || n < 0 || n > RULES.maxAnimals) return false;
       return this.lockValue(i, n, 'pick');
     }
     lock(i) {
-      if (!this.canAnswer(i) || this.phase !== 'answer') return false;
+      if (!this.canAnswer(i) || !this.answering(i)) return false;
       const A = this.players[i].ans;
       if (A.typed !== null) return this.lockValue(i, A.typed, 'typed');
       if (A.draft === null) { this.emit('refuse', { i, why: 'empty' }); return false; }
@@ -420,7 +466,7 @@
     }
     lockValue(i, n, how) {
       const A = this.players[i].ans;
-      if (A.locked || this.phase !== 'answer') return false;
+      if (A.locked || (this.phase !== 'answer' && this.phase !== 'observe')) return false;
       A.locked = true;
       A.value = n;
       A.at = this.phaseT;
@@ -575,6 +621,9 @@
               ready: !!pw.kind && pw.activeT <= 0 && pw.coolT <= 0 && !(pw.kind === 'spotlight' && cfg.characters.pilot.nightOnly && !night),
             },
             locked: A.locked,
+            early: A.early !== null, // said ready during the count: binoculars shut, answer box open
+            spent: A.spent, // their answer time ran out with no answer
+            answerLeft: this.phase === 'answer' ? Math.max(0, this.answerT - this.phaseT) : this.phase === 'observe' && A.early !== null ? Math.max(0, this.answerT - (this.phaseT - A.early)) : null,
             entry: mine && !A.locked ? (A.typed !== null ? A.typed : A.draft) : null,
             pending: mine && A.pendT > 0,
             answer: shown && A.locked ? A.value : null,

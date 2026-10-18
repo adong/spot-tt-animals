@@ -109,10 +109,16 @@
   .pow.no { animation: nope 0.3s linear; }
   @keyframes nope { 25% { translate: calc(-50% - 6px) 0; } 75% { translate: calc(-50% + 6px) 0; } }
   .passive { position: absolute; left: 50%; bottom: 14px; translate: -50% 0; white-space: nowrap; font: 800 13px/1 'Rubik', sans-serif; padding: 7px 12px; border-radius: 999px; background: rgba(20, 18, 31, 0.8); border: 2px solid var(--teddy-l); }
-  .clicker { position: absolute; left: 12px; top: 10px; display: flex; align-items: center; gap: 4px; font: 800 12px/1 'Rubik', sans-serif; padding: 5px 9px; border-radius: 12px; background: rgba(20, 18, 31, 0.8); border: 2px solid rgba(255,255,255,0.6); }
+  .clicker { position: absolute; left: 12px; top: 52px; display: flex; align-items: center; gap: 4px; font: 800 12px/1 'Rubik', sans-serif; padding: 5px 9px; border-radius: 12px; background: rgba(20, 18, 31, 0.8); border: 2px solid rgba(255,255,255,0.6); }
   .clicker b { font-family: var(--display); font-weight: 400; font-size: 15px; letter-spacing: 2px; margin-left: 2px; }
   .clicker.bump { border-color: var(--yellow); }
   .pui.p1 .clicker { left: auto; right: 12px; }
+  /* I'm ready: answer early, while still counting */
+  .readybtn { position: absolute; left: 50%; top: 10px; translate: -50% 0; display: flex; align-items: center; gap: 6px; pointer-events: auto; touch-action: none;
+    font-family: var(--display); font-size: 15px; color: var(--ink); padding: 6px 14px; border-radius: 999px; background: var(--mint); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); white-space: nowrap; }
+  .readybtn:active, .readybtn.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  .readybtn kbd { min-width: 20px; height: 20px; font-size: 11px; }
+  .short .readybtn { font-size: 12px; padding: 4px 10px; top: 6px; border-width: 2px; }
   .ptoasts { position: absolute; left: 0; right: 0; top: 0; height: 0; }
   .ptoast {
     position: absolute; left: 50%; white-space: nowrap; font-family: var(--display); font-size: clamp(14px, 2.2vw, 22px); color: #fff;
@@ -330,7 +336,7 @@
   .short .pow em { display: none; }
   .short .passive { font-size: 11px; padding: 5px 9px; bottom: 6px; }
   .short .passive .ao { display: none; }
-  .short .clicker { top: 6px; padding: 3px 6px; font-size: 10px; }
+  .short .clicker { top: 38px; padding: 3px 6px; font-size: 10px; }
   .short .ask { gap: 4px; padding: 6px 8px 8px; border-radius: 14px; }
   .short .ansbox { height: 40px; min-width: 70px; font-size: 24px; }
   .short .ask .left b { font-size: 22px; }
@@ -396,6 +402,7 @@
     <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">A</kbd><em></em></button>
     <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
     <div class="clicker keyhint hidden" id="clk0"><kbd>W</kbd>+1 <kbd>S</kbd>−1 · <kbd>D</kbd>lock<b>●●</b></div>
+    <button class="readybtn hidden" id="rdy0">✋ READY<kbd class="keyhint">D</kbd></button>
     <div class="ask hidden" id="ask0"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp0"></div>
     <div class="ptoasts" id="pt0"></div>
@@ -404,6 +411,7 @@
     <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">←</kbd><em></em></button>
     <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
     <div class="clicker keyhint hidden" id="clk1"><kbd>↑</kbd>+1 <kbd>↓</kbd>−1 · <kbd>→</kbd>lock<b>●●</b></div>
+    <button class="readybtn hidden" id="rdy1">✋ READY<kbd class="keyhint">→</kbd></button>
     <div class="ask hidden" id="ask1"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp1"></div>
     <div class="ptoasts" id="pt1"></div>

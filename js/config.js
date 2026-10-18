@@ -16,7 +16,9 @@
     animalTypes: ['chicken', 'cow', 'sheep', 'rooster', 'hen'], // rule 1: one type per round, never a mixture
     roundsPerGame: 5, // rule 2
     observeSeconds: { easy: 60, medium: 30, hard: 15 }, // rule 3: the counting time, not the answer time
-    answerSeconds: 3, // rule 4
+    // rule 4 said 3 s. Alan (Teddy's dad) changed it to 30 s on 2026-10-18 after playing: 3 s was too short to type or tap
+    // a number. Put 3 back here (and answerTimeSeconds below) to play it Teddy's original way.
+    answerSeconds: 30, // rule 4, as changed by Alan
     maxAnimals: 20, // rule 8 (and answers are numbers from 0 to 20)
     minAnimals: 0, // rule 9: zero is possible (but extremely rare)
     zeroOnlyOnePlayer: true, // rule 10
@@ -30,7 +32,7 @@
     // ---- copies of Teddy's rules, kept here so the shape matches his GAME_CONFIG (the check makes sure they agree)
     roundsPerGame: 5,
     difficulty: { easy: 60, medium: 30, hard: 15 },
-    answerTimeSeconds: 3,
+    answerTimeSeconds: 30, // Alan's change (Teddy's document: 3)
 
     animals: {
       min: 1, // a normal field has 1 to 20 animals
@@ -76,7 +78,7 @@
       roundBanner: 1.4, // "ROUND 1 OF 5" shows this long before 3... 2... 1...
       countdownStep: 1, // each of 3, 2, 1
       typedConfirm: 0.8, // typing a 1 or 2 waits this long for a second digit (10-20), then locks by itself
-      endAnswerWhenBothLocked: true, // the 3 s can end early when both answers are in
+      endAnswerWhenBothLocked: true, // the answer time ends early when both answers are in (answering early ends the count too)
     },
 
     // PROPOSAL: powers are fresh (no cooldown) at the start of every round.
@@ -102,7 +104,7 @@
       treatFlySeconds: 0.9,
       byeSeconds: 1.2,
       saves: true,
-      shoutBefore: 0.6, // he answers for you inside the 3 s, so Teddy's 3-second rule still holds
+      shoutBefore: 0.6, // he answers for you inside the answer time, so it never runs over
       highFiveSpotSeconds: 5,
       highFiveRest: { easy: 12, medium: 20, hard: 20 },
     },
