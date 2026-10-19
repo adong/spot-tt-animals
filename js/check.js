@@ -667,7 +667,74 @@
     return out;
   }
 
-  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy, early };
+  // ---------------------------------------------------------------- 16. moving the binoculars (Alan's decision)
+
+  function aim(env) {
+    const out = [], cfg = env.cfg, M = SPOT.sim;
+    const ok = (name, cond, info) => out.push({ name, ok: !!cond, info: info || '' });
+    // every spot in the field can be looked at, with normal binoculars and with Teddy's
+    for (const chars of [['tommy', 'teddy'], ['teddy', 'tommy']]) {
+      const m = mk(env, { chars });
+      let miss = 0, n = 0;
+      for (let a = 0; a <= 30; a++) for (let b = 0; b <= 20; b++) {
+        const x = (a / 30 - 0.5) * (cfg.field.width - 1), z = (b / 20 - 0.5) * (cfg.field.depth - 1), q = M.toLens(cfg, x, z, 0.4);
+        m.aimAt(0, q.sx, q.sy);
+        n++;
+        if (!M.inLens(cfg, m.lensFor(0), x, z, 0.4, m.players[0].aim.x, m.players[0].aim.y)) miss++;
+      }
+      ok(`${chars[0] === 'teddy' ? 'Teddy\'s' : 'normal'} binoculars can be pointed at every spot in the field`, miss === 0, `${miss} of ${n} spots out of reach`);
+    }
+    let m = mk(env, { mode: '2p', chars: ['tommy', 'tommy'] });
+    const L = m.aimLimit(0);
+    m.aimAt(0, 99, -99);
+    ok('they stop at the edge of the field', m.players[0].aim.x === L.x && m.players[0].aim.y === -L.y && L.x > 0 && L.y > 0, `limit ${L.x.toFixed(2)} x ${L.y.toFixed(2)}`);
+    // pointing at a hiding animal shows it (and your brother stops pointing at it)
+    m = mk(env, { mode: '2p', seed: 101, chars: ['tommy', 'tommy'], tweakCounts: () => [20, 20] });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    m.aimAt(0, 0, 0);
+    const a = m.players[0].field.animals.find((an) => !M.inLens(cfg, m.lensFor(0), an.x, an.z, 0.4, 0, 0)); // hiding from the middle
+    let shown = false;
+    if (a) { const q = M.toLens(cfg, a.x, a.z, 0.4); m.aimAt(0, q.sx, q.sy); shown = M.inLens(cfg, m.lensFor(0), a.x, a.z, 0.4, m.players[0].aim.x, m.players[0].aim.y); }
+    ok('point your binoculars at a hiding animal and you see it', !!a && shown);
+    // only your own binoculars move
+    const v1 = m.visibleCount(1), a1 = Object.assign({}, m.players[1].aim);
+    for (let k = 0; k < 20; k++) m.aimBy(0, 0.7, (k % 2 ? 1 : -1) * 0.4);
+    ok('moving your binoculars never moves the other player\'s', m.players[1].aim.x === a1.x && m.players[1].aim.y === a1.y && m.visibleCount(1) === v1);
+    // scouting works: a sweep over a round finds every animal, even though they move
+    m = mk(env, { mode: '2p', seed: 102, still: false, difficulty: 'easy', chars: ['tommy', 'tommy'], tweakCounts: () => [20, 20] });
+    stepUntil(m, (x) => x.phase === 'observe');
+    const seen = new Set(), L2 = m.aimLimit(0);
+    stepUntil(m, (x) => x.phaseT > 30, 40, DT, (x) => {
+      const t = x.phaseT;
+      x.aimAt(0, L2.x * Math.sin(t * 0.9), L2.y * Math.sin(t * 2.3)); // a zig-zag sweep
+      for (const an of x.players[0].field.animals) if (M.inLens(cfg, x.lensFor(0), an.x, an.z, 0.4, x.players[0].aim.x, x.players[0].aim.y)) seen.add(an.id);
+    });
+    ok('scouting: sweeping your binoculars over the field finds every animal', seen.size === 20, `${seen.size} of 20 seen`);
+    // every round starts looking at the middle; the computer's binoculars sweep by themselves
+    m = mk(env, { mode: 'cpu', seed: 103, difficulty: 'hard' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 2);
+    m.aimAt(0, 3, 1);
+    const cpuA = Object.assign({}, m.players[1].aim);
+    m.step(0.5);
+    const cpuMoved = m.players[1].aim.x !== cpuA.x;
+    stepUntil(m, (x) => x.phase === 'result', 80);
+    m.next();
+    ok('the computer\'s binoculars sweep its field, and every round starts in the middle', cpuMoved && m.players[0].aim.x === 0 && m.players[0].aim.y === 0);
+    // where you point never changes the computer
+    const play = (wiggle) => {
+      const x = mk(env, { mode: 'cpu', difficulty: 'medium', seed: 104, chars: ['tommy', 'tommy'] });
+      const ans = [];
+      stepUntil(x, (y) => y.phase === 'final', 600, 0.05, (y) => {
+        if (wiggle && y.phase === 'observe') y.aimBy(0, Math.sin(y.t) * 0.3, Math.cos(y.t * 1.7) * 0.2);
+        if (y.phase === 'result') { ans.push(y.results[y.results.length - 1].answers[1]); y.next(); }
+      });
+      return ans.join();
+    };
+    ok('where you point your binoculars never changes what the computer answers', play(false) === play(true));
+    return out;
+  }
+
+  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy, early, aim };
   // a check that crashes counts as failed, never as passed
   function runCheck(k, env) {
     try { return CHECKS[k](env); } catch (e) { return [{ name: `${k} crashed: ${e && e.message}`, ok: false, info: String(e && e.stack || e).split('\n')[1] || '' }]; }
@@ -714,6 +781,7 @@
           }
           if (m.phase === 'answer' && P.ans.early !== null) plan[i] = { at: 1e9 };
           if (m.phase === 'observe') {
+            if (rng() < 0.05) { const L = m.aimLimit(i); m.aimAt(i, (rng() * 2 - 1) * L.x, (rng() * 2 - 1) * L.y); }
             if (rng() < 0.004) m.usePower(i);
             if (m.mode === '2p' && rng() < 0.01) m.adjust(i, rng() < 0.85 ? 1 : -1);
           } else if (m.phase === 'answer' && !P.ans.locked) {
@@ -757,6 +825,7 @@
         if (m.buddy && m.mode !== 'cpu') fail('a visiting brother in two-player mode');
         if (m.mode === 'cpu' && m.spotting(1)) fail('the computer got spotting help');
         if (m.phase !== 'observe' && (m.spotting(0) || m.spotting(1))) fail(`spotting outside the observation (${m.phase})`);
+        m.players.forEach((P, i) => { const L = m.aimLimit(i); if (!(Math.abs(P.aim.x) <= L.x + 1e-9 && Math.abs(P.aim.y) <= L.y + 1e-9)) fail(`binoculars pointing off the field (${P.aim.x}, ${P.aim.y})`); });
         for (const P of m.players) {
           const f = P.field, mv = cfg.movement[f.type];
           if (f.type !== type || f.animals.length !== f.count || f.count < 0 || f.count > R.maxAnimals) fail(`field ${P.i}: ${f.type} x${f.animals.length} for ${f.count}`);
@@ -844,6 +913,10 @@
     run('an early answer time that never runs out', ['early'], withPatch((m) => { m.tickEarly = function () {}; }));
     run('an early answer that shows before both are in', ['early'], withPatch((m) => { const vw = m.view; m.view = function () { const v = vw.call(this); v.players.forEach((p, i) => { if (this.players[i].ans.early !== null) p.answer = this.players[i].ans.value; }); return v; }; }));
     run('the computer\'s powers using its answer dice', ['early'], withPatch((m) => { m.planCpuPower = function (i) { return SPOT.brain.powerWait(this.cpuView(i), this.cfg, this.rngCpu); }; }));
+    run('binoculars that can\'t move', ['aim'], withPatch((m) => { m.aimAt = function () { return true; }; }));
+    run('binoculars that can\'t reach the edges of the field', ['aim'], withPatch((m) => { m.aimLimit = function () { return { x: 1, y: 0.5 }; }; }));
+    run('moving one player\'s binoculars moves both', ['aim'], withPatch((m) => { const at = m.aimAt; m.aimAt = function (i, x, y) { const r = at.call(this, i, x, y); for (const P of this.players) { P.aim.x = this.players[i].aim.x; P.aim.y = this.players[i].aim.y; } return r; }; }));
+    run('aiming that uses the computer\'s dice', ['aim'], withPatch((m) => { const at = m.aimAt; m.aimAt = function (i, x, y) { this.rngCpu(); return at.call(this, i, x, y); }; }));
     run('unlocks that count the computer\'s wins', ['unlocks'], Object.assign(base(), { progress: Object.assign({}, M.progress, { record(p, cfg, final, mode) { const won = final.winner !== null; p.games++; if (won) p.wins++; const newly = []; for (const u of cfg.roster.unlocks) if (p.wins >= u.wins && !M.progress.has(p, cfg, u.id)) { p.unlocked.push(u.id); newly.push(u.id); } return { humanWon: won, newly }; } }) }));
     void env0;
     return cases;

@@ -479,7 +479,8 @@
     const h = 7.2, z = (h * Math.cos(TILT) - screenY) / Math.sin(TILT);
     return { x: FX[field] + 1.2, y: h, z };
   }
-  function updateHeli(H, field, lensR, on, dt) {
+  function updateHeli(H, field, lensR, on, dt, aim) {
+    const ax = aim ? aim.x : 0, ay = aim ? aim.y : 0;
     H.k += ((on ? 1 : 0) - H.k) * Math.min(1, dt * 3.5);
     if (on) H.t += dt;
     const vis = H.k > 0.02;
@@ -488,7 +489,8 @@
     // it flies in from the right where you can see Zoom wave, then climbs to the top rim, out of the way
     const arrive = Math.min(1, H.t / 0.9), e = 1 - Math.pow(1 - arrive, 3);
     const climb = smoothstep(Math.min(1, Math.max(0, (H.t - 1.6) / 0.7)));
-    const s = heliSpot(field, lensR * 0.45 + (lensR * 0.55 + 0.7) * climb);
+    const s = heliSpot(field, ay + lensR * 0.45 + (lensR * 0.55 + 0.7) * climb);
+    s.x += ax; // he hovers over wherever your binoculars are pointing
     H.root.position.set(s.x + (1 - e) * 12 + Math.sin(H.t * 1.3) * 0.25, s.y + Math.sin(H.t * 2.1) * 0.12, s.z);
     H.root.rotation.set(0.08, Math.PI * 0.85, (1 - e) * 0.3);
     H.rotor.rotation.y += dt * 28;
@@ -804,7 +806,7 @@
     x.setTransform(o.dpr, 0, 0, o.dpr, 0, 0);
     x.clearRect(0, 0, o.w, o.h);
     if (!pts.length) return;
-    const cx = o.w / 2, cy = o.h / 2, off = o.lobe * o.r, pulse = 1 + Math.sin(o.t * 7) * 0.12;
+    const cx = o.w / 2 + (o.ax || 0), cy = o.h / 2 + (o.ay || 0), off = o.lobe * o.r, pulse = 1 + Math.sin(o.t * 7) * 0.12;
     const size = Math.max(9, o.r * 0.09) * pulse;
     x.lineJoin = 'round';
     for (const [px, py] of pts) {

@@ -33,8 +33,11 @@
   body { background: radial-gradient(ellipse at 50% 30%, #8ed36a, #4f9a35 60%, #3b7a28); }
   body.night { background: radial-gradient(ellipse at 50% 30%, #2f3d78, #1b2350 60%, #10142e); }
   #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  .mask { position: fixed; display: none; pointer-events: none; border-radius: 16px; }
-  .playing .mask { display: block; }
+  /* the binocular frame: a big painted canvas that slides inside a window the size of the view (moving it is just a transform) */
+  .maskwrap { position: fixed; display: none; overflow: hidden; pointer-events: none; border-radius: 16px; }
+  .playing .maskwrap { display: block; }
+  .mask { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
+  .playing #view { cursor: crosshair; }
   .hidden { display: none !important; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   button:focus { outline: none; }
@@ -351,6 +354,10 @@
   /* standing up, the lenses nearly fill the view's width: the power button goes in the bottom-right corner, which is always frame */
   .portrait .pow { left: auto; right: 10px; translate: 0 0; }
   .portrait .pow.no { animation-name: nope2; }
+  /* standing up, the cards sit in the top corners: READY and the clicker go just under them */
+  .portrait .readybtn { left: 12px; top: 72px; translate: 0 0; }
+  .portrait .clicker, .portrait .pui.p1 .clicker { left: auto; right: 12px; top: 72px; }
+  .portrait.short .readybtn, .portrait.short .clicker, .portrait.short .pui.p1 .clicker { top: 54px; }
   @keyframes nope2 { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
   @media (max-height: 620px) {
     .ccard { width: 160px; padding: 6px 8px; gap: 2px; }
@@ -380,8 +387,8 @@
 </head>
 <body>
 <canvas id="view"></canvas>
-<canvas id="mask0" class="mask"></canvas>
-<canvas id="mask1" class="mask"></canvas>
+<div class="maskwrap" id="mw0"><canvas id="mask0" class="mask"></canvas></div>
+<div class="maskwrap" id="mw1"><canvas id="mask1" class="mask"></canvas></div>
 <canvas id="spot0" class="spotc"></canvas>
 <canvas id="spot1" class="spotc"></canvas>
 <div id="fence"></div>
@@ -399,19 +406,19 @@
     <div class="ibtns"><button id="pauseBtn" class="ibtn" title="Pause (P)">❚❚</button><button class="ibtn muteBtn" title="Sound (M)">🔊</button></div>
   </div>
   <div class="pui p0" id="pui0">
-    <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">A</kbd><em></em></button>
+    <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">F</kbd><em></em></button>
     <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
-    <div class="clicker keyhint hidden" id="clk0"><kbd>W</kbd>+1 <kbd>S</kbd>−1 · <kbd>D</kbd>lock<b>●●</b></div>
-    <button class="readybtn hidden" id="rdy0">✋ READY<kbd class="keyhint">D</kbd></button>
+    <div class="clicker keyhint hidden" id="clk0"><kbd>E</kbd>+1 <kbd>Q</kbd>−1 · <kbd>Space</kbd>lock<b>●●</b></div>
+    <button class="readybtn hidden" id="rdy0">✋ READY<kbd class="keyhint">Space</kbd></button>
     <div class="ask hidden" id="ask0"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp0"></div>
     <div class="ptoasts" id="pt0"></div>
   </div>
   <div class="pui p1" id="pui1">
-    <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">←</kbd><em></em></button>
+    <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">/</kbd><em></em></button>
     <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
-    <div class="clicker keyhint hidden" id="clk1"><kbd>↑</kbd>+1 <kbd>↓</kbd>−1 · <kbd>→</kbd>lock<b>●●</b></div>
-    <button class="readybtn hidden" id="rdy1">✋ READY<kbd class="keyhint">→</kbd></button>
+    <div class="clicker keyhint hidden" id="clk1"><kbd>&gt;</kbd>+1 <kbd>&lt;</kbd>−1 · <kbd>Enter</kbd>lock<b>●●</b></div>
+    <button class="readybtn hidden" id="rdy1">✋ READY<kbd class="keyhint">Enter</kbd></button>
     <div class="ask hidden" id="ask1"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp1"></div>
     <div class="ptoasts" id="pt1"></div>
@@ -2099,9 +2106,16 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     const t = (cfg.lens.tilt * Math.PI) / 180;
     return { sx: x, sy: -z * Math.sin(t) + y * Math.cos(t) };
   }
-  function inLens(cfg, r, x, z, y = 0) {
-    const p = toLens(cfg, x, z, y), o = cfg.lens.lobe * r;
-    return Math.hypot(p.sx - o, p.sy) < r || Math.hypot(p.sx + o, p.sy) < r;
+  // (ax, ay): where the binoculars are pointing, in lens units from the middle of the field (Alan: they move with your
+  // mouse, finger or keys, so you scout around your own field)
+  function inLens(cfg, r, x, z, y = 0, ax = 0, ay = 0) {
+    const p = toLens(cfg, x, z, y), o = cfg.lens.lobe * r, sx = p.sx - ax, sy = p.sy - ay;
+    return Math.hypot(sx - o, sy) < r || Math.hypot(sx + o, sy) < r;
+  }
+  // how far the binoculars can point from the middle: far enough that every spot in the field can be seen
+  function aimLimit(cfg, r) {
+    const t = (cfg.lens.tilt * Math.PI) / 180;
+    return { x: Math.max(0, cfg.field.width / 2 - 0.5 * r), y: Math.max(0, (cfg.field.depth / 2) * Math.sin(t) - 0.5 * r) };
   }
   // How much of the field a lens of radius r shows (0..1), by sampling a grid.
   function lensCover(cfg, r, n = 80) {
@@ -2244,6 +2258,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         ans: null,
         cpuWaitAt: null,
         spotT: 0, // two players: a high five lets you spot your hiding animals this long
+        aim: { x: 0, y: 0 }, // where this player's binoculars point (lens units from the middle of their field)
       }));
       this.rounds = this.cfg.roundsPerGame;
       this.observeT = this.cfg.difficulty[this.difficulty];
@@ -2275,6 +2290,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         if (this.cfg.powers.resetEachRound || this.round === 1) { P.power.activeT = 0; P.power.coolT = 0; }
         P.power.usesRound = 0;
         P.cpuWaitAt = null;
+        P.aim.x = P.aim.y = 0; // every round starts looking at the middle
       });
       this.cpuPlans = [null, null];
       this.phase = 'ready';
@@ -2325,6 +2341,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         this.tickPowers(dt);
         for (const P of this.players) if (P.spotT > 0) P.spotT = Math.max(0, P.spotT - dt);
         this.cpuObserve();
+        this.cpuAim();
         this.moveFields(dt);
         this.tickEarly(dt);
         const left = this.observeT - this.phaseT;
@@ -2397,8 +2414,28 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     }
     lensFor(i) { return lensRadius(this.cfg, this.players[i].char); }
     visibleCount(i) {
-      const r = this.lensFor(i);
-      return this.players[i].field.animals.filter((a) => inLens(this.cfg, r, a.x, a.z, 0.4)).length;
+      const r = this.lensFor(i), A = this.players[i].aim;
+      return this.players[i].field.animals.filter((a) => inLens(this.cfg, r, a.x, a.z, 0.4, A.x, A.y)).length;
+    }
+    // ---- moving the binoculars (Alan's decision on Teddy's open question: yes, they scan your own field)
+    aimLimit(i) { return aimLimit(this.cfg, this.lensFor(i)); }
+    aimAt(i, x, y) {
+      const P = this.players[i];
+      if (!P) return false;
+      const L = this.aimLimit(i);
+      P.aim.x = clamp(Number(x) || 0, -L.x, L.x);
+      P.aim.y = clamp(Number(y) || 0, -L.y, L.y);
+      return true;
+    }
+    aimBy(i, dx, dy) { const A = this.players[i] && this.players[i].aim; return !!A && this.aimAt(i, A.x + dx, A.y + dy); }
+    // the computer's binoculars sweep slowly round its field (just for show: it counts the same either way, no dice)
+    cpuAim() {
+      for (const P of this.players) {
+        if (P.human) continue;
+        const L = this.aimLimit(P.i), t = this.t;
+        P.aim.x = L.x * 0.75 * Math.sin(t * 0.37 + P.i * 1.3);
+        P.aim.y = L.y * 0.75 * Math.sin(t * 0.53 + P.i);
+      }
     }
 
     // ---- the computer player: it sees its own field and nothing else
@@ -2595,8 +2632,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     }
     spotted(i) {
       if (!this.spotting(i)) return [];
-      const r = this.lensFor(i);
-      return this.players[i].field.animals.filter((a) => !inLens(this.cfg, r, a.x, a.z, 0.4));
+      const r = this.lensFor(i), A = this.players[i].aim;
+      return this.players[i].field.animals.filter((a) => !inLens(this.cfg, r, a.x, a.z, 0.4, A.x, A.y));
     }
 
     // ---- the reveal
@@ -2673,6 +2710,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
             saved: last ? last.saved[i] : null,
             yours: last ? last.yours[i] : null,
             spotting: this.spotting(i),
+            aim: { x: P.aim.x, y: P.aim.y },
           };
         }),
         result: last,
@@ -2715,7 +2753,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     },
   };
 
-  SPOT.sim = { Match, PHASES, CHARS, TREATS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, lensCover, powerTimes, progress };
+  SPOT.sim = { Match, PHASES, CHARS, TREATS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, aimLimit, lensCover, powerTimes, progress };
 })();
 
 </script>
@@ -3441,7 +3479,74 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     return out;
   }
 
-  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy, early };
+  // ---------------------------------------------------------------- 16. moving the binoculars (Alan's decision)
+
+  function aim(env) {
+    const out = [], cfg = env.cfg, M = SPOT.sim;
+    const ok = (name, cond, info) => out.push({ name, ok: !!cond, info: info || '' });
+    // every spot in the field can be looked at, with normal binoculars and with Teddy's
+    for (const chars of [['tommy', 'teddy'], ['teddy', 'tommy']]) {
+      const m = mk(env, { chars });
+      let miss = 0, n = 0;
+      for (let a = 0; a <= 30; a++) for (let b = 0; b <= 20; b++) {
+        const x = (a / 30 - 0.5) * (cfg.field.width - 1), z = (b / 20 - 0.5) * (cfg.field.depth - 1), q = M.toLens(cfg, x, z, 0.4);
+        m.aimAt(0, q.sx, q.sy);
+        n++;
+        if (!M.inLens(cfg, m.lensFor(0), x, z, 0.4, m.players[0].aim.x, m.players[0].aim.y)) miss++;
+      }
+      ok(`${chars[0] === 'teddy' ? 'Teddy\'s' : 'normal'} binoculars can be pointed at every spot in the field`, miss === 0, `${miss} of ${n} spots out of reach`);
+    }
+    let m = mk(env, { mode: '2p', chars: ['tommy', 'tommy'] });
+    const L = m.aimLimit(0);
+    m.aimAt(0, 99, -99);
+    ok('they stop at the edge of the field', m.players[0].aim.x === L.x && m.players[0].aim.y === -L.y && L.x > 0 && L.y > 0, `limit ${L.x.toFixed(2)} x ${L.y.toFixed(2)}`);
+    // pointing at a hiding animal shows it (and your brother stops pointing at it)
+    m = mk(env, { mode: '2p', seed: 101, chars: ['tommy', 'tommy'], tweakCounts: () => [20, 20] });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 1);
+    m.aimAt(0, 0, 0);
+    const a = m.players[0].field.animals.find((an) => !M.inLens(cfg, m.lensFor(0), an.x, an.z, 0.4, 0, 0)); // hiding from the middle
+    let shown = false;
+    if (a) { const q = M.toLens(cfg, a.x, a.z, 0.4); m.aimAt(0, q.sx, q.sy); shown = M.inLens(cfg, m.lensFor(0), a.x, a.z, 0.4, m.players[0].aim.x, m.players[0].aim.y); }
+    ok('point your binoculars at a hiding animal and you see it', !!a && shown);
+    // only your own binoculars move
+    const v1 = m.visibleCount(1), a1 = Object.assign({}, m.players[1].aim);
+    for (let k = 0; k < 20; k++) m.aimBy(0, 0.7, (k % 2 ? 1 : -1) * 0.4);
+    ok('moving your binoculars never moves the other player\'s', m.players[1].aim.x === a1.x && m.players[1].aim.y === a1.y && m.visibleCount(1) === v1);
+    // scouting works: a sweep over a round finds every animal, even though they move
+    m = mk(env, { mode: '2p', seed: 102, still: false, difficulty: 'easy', chars: ['tommy', 'tommy'], tweakCounts: () => [20, 20] });
+    stepUntil(m, (x) => x.phase === 'observe');
+    const seen = new Set(), L2 = m.aimLimit(0);
+    stepUntil(m, (x) => x.phaseT > 30, 40, DT, (x) => {
+      const t = x.phaseT;
+      x.aimAt(0, L2.x * Math.sin(t * 0.9), L2.y * Math.sin(t * 2.3)); // a zig-zag sweep
+      for (const an of x.players[0].field.animals) if (M.inLens(cfg, x.lensFor(0), an.x, an.z, 0.4, x.players[0].aim.x, x.players[0].aim.y)) seen.add(an.id);
+    });
+    ok('scouting: sweeping your binoculars over the field finds every animal', seen.size === 20, `${seen.size} of 20 seen`);
+    // every round starts looking at the middle; the computer's binoculars sweep by themselves
+    m = mk(env, { mode: 'cpu', seed: 103, difficulty: 'hard' });
+    stepUntil(m, (x) => x.phase === 'observe' && x.phaseT > 2);
+    m.aimAt(0, 3, 1);
+    const cpuA = Object.assign({}, m.players[1].aim);
+    m.step(0.5);
+    const cpuMoved = m.players[1].aim.x !== cpuA.x;
+    stepUntil(m, (x) => x.phase === 'result', 80);
+    m.next();
+    ok('the computer\'s binoculars sweep its field, and every round starts in the middle', cpuMoved && m.players[0].aim.x === 0 && m.players[0].aim.y === 0);
+    // where you point never changes the computer
+    const play = (wiggle) => {
+      const x = mk(env, { mode: 'cpu', difficulty: 'medium', seed: 104, chars: ['tommy', 'tommy'] });
+      const ans = [];
+      stepUntil(x, (y) => y.phase === 'final', 600, 0.05, (y) => {
+        if (wiggle && y.phase === 'observe') y.aimBy(0, Math.sin(y.t) * 0.3, Math.cos(y.t * 1.7) * 0.2);
+        if (y.phase === 'result') { ans.push(y.results[y.results.length - 1].answers[1]); y.next(); }
+      });
+      return ans.join();
+    };
+    ok('where you point your binoculars never changes what the computer answers', play(false) === play(true));
+    return out;
+  }
+
+  const CHECKS = { guard, timing, answers, scoring, deals, fields, freeze, wide, heli, hidden, cpu, unlocks, skies, buddy, early, aim };
   // a check that crashes counts as failed, never as passed
   function runCheck(k, env) {
     try { return CHECKS[k](env); } catch (e) { return [{ name: `${k} crashed: ${e && e.message}`, ok: false, info: String(e && e.stack || e).split('\n')[1] || '' }]; }
@@ -3488,6 +3593,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
           }
           if (m.phase === 'answer' && P.ans.early !== null) plan[i] = { at: 1e9 };
           if (m.phase === 'observe') {
+            if (rng() < 0.05) { const L = m.aimLimit(i); m.aimAt(i, (rng() * 2 - 1) * L.x, (rng() * 2 - 1) * L.y); }
             if (rng() < 0.004) m.usePower(i);
             if (m.mode === '2p' && rng() < 0.01) m.adjust(i, rng() < 0.85 ? 1 : -1);
           } else if (m.phase === 'answer' && !P.ans.locked) {
@@ -3531,6 +3637,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         if (m.buddy && m.mode !== 'cpu') fail('a visiting brother in two-player mode');
         if (m.mode === 'cpu' && m.spotting(1)) fail('the computer got spotting help');
         if (m.phase !== 'observe' && (m.spotting(0) || m.spotting(1))) fail(`spotting outside the observation (${m.phase})`);
+        m.players.forEach((P, i) => { const L = m.aimLimit(i); if (!(Math.abs(P.aim.x) <= L.x + 1e-9 && Math.abs(P.aim.y) <= L.y + 1e-9)) fail(`binoculars pointing off the field (${P.aim.x}, ${P.aim.y})`); });
         for (const P of m.players) {
           const f = P.field, mv = cfg.movement[f.type];
           if (f.type !== type || f.animals.length !== f.count || f.count < 0 || f.count > R.maxAnimals) fail(`field ${P.i}: ${f.type} x${f.animals.length} for ${f.count}`);
@@ -3618,6 +3725,10 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     run('an early answer time that never runs out', ['early'], withPatch((m) => { m.tickEarly = function () {}; }));
     run('an early answer that shows before both are in', ['early'], withPatch((m) => { const vw = m.view; m.view = function () { const v = vw.call(this); v.players.forEach((p, i) => { if (this.players[i].ans.early !== null) p.answer = this.players[i].ans.value; }); return v; }; }));
     run('the computer\'s powers using its answer dice', ['early'], withPatch((m) => { m.planCpuPower = function (i) { return SPOT.brain.powerWait(this.cpuView(i), this.cfg, this.rngCpu); }; }));
+    run('binoculars that can\'t move', ['aim'], withPatch((m) => { m.aimAt = function () { return true; }; }));
+    run('binoculars that can\'t reach the edges of the field', ['aim'], withPatch((m) => { m.aimLimit = function () { return { x: 1, y: 0.5 }; }; }));
+    run('moving one player\'s binoculars moves both', ['aim'], withPatch((m) => { const at = m.aimAt; m.aimAt = function (i, x, y) { const r = at.call(this, i, x, y); for (const P of this.players) { P.aim.x = this.players[i].aim.x; P.aim.y = this.players[i].aim.y; } return r; }; }));
+    run('aiming that uses the computer\'s dice', ['aim'], withPatch((m) => { const at = m.aimAt; m.aimAt = function (i, x, y) { this.rngCpu(); return at.call(this, i, x, y); }; }));
     run('unlocks that count the computer\'s wins', ['unlocks'], Object.assign(base(), { progress: Object.assign({}, M.progress, { record(p, cfg, final, mode) { const won = final.winner !== null; p.games++; if (won) p.wins++; const newly = []; for (const u of cfg.roster.unlocks) if (p.wins >= u.wins && !M.progress.has(p, cfg, u.id)) { p.unlocked.push(u.id); newly.push(u.id); } return { humanWon: won, newly }; } }) }));
     void env0;
     return cases;
@@ -4207,7 +4318,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     const h = 7.2, z = (h * Math.cos(TILT) - screenY) / Math.sin(TILT);
     return { x: FX[field] + 1.2, y: h, z };
   }
-  function updateHeli(H, field, lensR, on, dt) {
+  function updateHeli(H, field, lensR, on, dt, aim) {
+    const ax = aim ? aim.x : 0, ay = aim ? aim.y : 0;
     H.k += ((on ? 1 : 0) - H.k) * Math.min(1, dt * 3.5);
     if (on) H.t += dt;
     const vis = H.k > 0.02;
@@ -4216,7 +4328,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     // it flies in from the right where you can see Zoom wave, then climbs to the top rim, out of the way
     const arrive = Math.min(1, H.t / 0.9), e = 1 - Math.pow(1 - arrive, 3);
     const climb = smoothstep(Math.min(1, Math.max(0, (H.t - 1.6) / 0.7)));
-    const s = heliSpot(field, lensR * 0.45 + (lensR * 0.55 + 0.7) * climb);
+    const s = heliSpot(field, ay + lensR * 0.45 + (lensR * 0.55 + 0.7) * climb);
+    s.x += ax; // he hovers over wherever your binoculars are pointing
     H.root.position.set(s.x + (1 - e) * 12 + Math.sin(H.t * 1.3) * 0.25, s.y + Math.sin(H.t * 2.1) * 0.12, s.z);
     H.root.rotation.set(0.08, Math.PI * 0.85, (1 - e) * 0.3);
     H.rotor.rotation.y += dt * 28;
@@ -4532,7 +4645,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     x.setTransform(o.dpr, 0, 0, o.dpr, 0, 0);
     x.clearRect(0, 0, o.w, o.h);
     if (!pts.length) return;
-    const cx = o.w / 2, cy = o.h / 2, off = o.lobe * o.r, pulse = 1 + Math.sin(o.t * 7) * 0.12;
+    const cx = o.w / 2 + (o.ax || 0), cy = o.h / 2 + (o.ay || 0), off = o.lobe * o.r, pulse = 1 + Math.sin(o.t * 7) * 0.12;
     const size = Math.max(9, o.r * 0.09) * pulse;
     x.lineJoin = 'round';
     for (const [px, py] of pts) {
@@ -4797,20 +4910,36 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
 
   const masks = [$('mask0'), $('mask1')];
   const maskKey = ['', ''];
+  const maskOff = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+  // The frame is painted once, bigger than the view by how far the binoculars can move, with the lenses in its middle;
+  // pointing them somewhere just slides it (moveMasks), so it never has to be repainted while you look around.
   function paintMasks(force) {
-    const v = st.view;
-    if (!v || (st.mode !== 'match' && st.mode !== 'pause')) return;
+    const v = st.view, S = st.match;
+    if (!v || !S || (st.mode !== 'match' && st.mode !== 'pause')) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     for (let i = 0; i < 2; i++) {
-      const r = rects[i], P = v.players[i];
+      const r = rects[i], P = v.players[i], L = S.aimLimit(i);
+      const mx = Math.ceil(L.x / upp) + 8, my = Math.ceil(L.y / upp) + 8;
+      maskOff[i] = { x: mx, y: my };
       const o = {
-        w: r.w, h: r.h, dpr, r: P.lens / upp, lobe: C.lens.lobe, open: smooth(st.lensOpen[i]),
+        w: r.w + 2 * mx, h: r.h + 2 * my, dpr, r: P.lens / upp, lobe: C.lens.lobe, open: smooth(st.lensOpen[i]),
         night: v.sky === 'night', lit: st.litK[i] > 0.5, frost: Math.round(st.frostK[i] * 10) / 10, color: PCOL[i],
       };
       const key = `${o.w},${o.h},${o.r.toFixed(1)},${o.open.toFixed(3)},${o.night},${o.lit},${o.frost}`;
       if (key === maskKey[i] && !force) continue;
       maskKey[i] = key;
       A.paintMask(masks[i], o);
+      masks[i].style.width = `${o.w}px`;
+      masks[i].style.height = `${o.h}px`;
+    }
+    moveMasks();
+  }
+  function moveMasks() {
+    const S = st.match;
+    if (!S) return;
+    for (let i = 0; i < 2; i++) {
+      const a = S.players[i].aim;
+      masks[i].style.transform = `translate(${(-maskOff[i].x + a.x / upp).toFixed(1)}px, ${(-maskOff[i].y - a.y / upp).toFixed(1)}px)`;
     }
   }
 
@@ -4865,7 +4994,8 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       st.spotOn[i] = on;
       const r = rects[i];
       const pts = on ? S.spotted(i).map((a) => { const q = M.toLens(C, a.x, a.z, 0.4); return [r.w / 2 + q.sx / upp, r.h / 2 - q.sy / upp]; }) : [];
-      A.paintSpots(spots[i], pts, { w: r.w, h: r.h, dpr, r: S ? S.lensFor(i) / upp : 1, lobe: C.lens.lobe, t: st.time });
+      const aim = S ? S.players[i].aim : { x: 0, y: 0 };
+      A.paintSpots(spots[i], pts, { w: r.w, h: r.h, dpr, r: S ? S.lensFor(i) / upp : 1, lobe: C.lens.lobe, t: st.time, ax: aim.x / upp, ay: -aim.y / upp });
     }
   }
 
@@ -4969,7 +5099,9 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     // one scale for both views (fair: animals look the same size to both), big enough for the bigger binoculars
     const S = st.match;
     const lensMax = S ? Math.max(S.lensFor(0), S.lensFor(1)) : C.lens.radius;
-    const needW = 2 * (C.lens.lobe * lensMax + lensMax) + 1.1, needH = 2 * lensMax + 1.4;
+    // ...and the whole field fits in the view, so the binoculars can reach every corner of it
+    const needW = Math.max(2 * (C.lens.lobe * lensMax + lensMax) + 1.1, C.field.width + 1.2);
+    const needH = Math.max(2 * lensMax + 1.4, C.field.depth * Math.sin(A.TILT) + 2.0);
     upp = Math.max(needW / rects[0].w, needH / rects[0].h);
     cams.forEach((c, i) => {
       const r = rects[i];
@@ -4978,7 +5110,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     });
     for (let i = 0; i < 2; i++) {
       const r = rects[i];
-      place(masks[i], r.x, r.y, r.w, r.h);
+      place($('mw' + i), r.x, r.y, r.w, r.h);
       place(spots[i], r.x, r.y, r.w, r.h);
       place($('pui' + i), r.x, r.y, r.w, r.h);
     }
@@ -5068,7 +5200,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       pow.querySelector('small').textContent = ch.power;
       pow.style.pointerEvents = P.human ? '' : 'none';
       const kb = pow.querySelector('kbd');
-      kb.textContent = i && S.mode === '2p' ? '←' : 'A';
+      kb.textContent = i && S.mode === '2p' ? '/' : 'F';
       kb.style.display = P.human ? '' : 'none';
       $('pas' + i).classList.toggle('hidden', P.char !== 'teddy');
       const clk = $('clk' + i);
@@ -5187,7 +5319,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         else if (p.locked && S.mode === '2p' && v.phase === 'observe') hint = 'locked! the other player is still counting';
         else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : st.shouted ? `🛡️ ${nameOf(v.buddy ? v.buddy.kind : 'tommy')} ANSWERED FOR YOU!` : 'locked in!';
         else if (isTouch) hint = 'tap your number';
-        else if (S.mode === '2p') hint = i ? '↑ ↓ to fix your count · → or Enter to lock' : 'W S to fix your count · D or Space to lock';
+        else if (S.mode === '2p') hint = i ? '> < to fix your count · Enter to lock' : 'E Q to fix your count · Space to lock';
         else hint = 'type the number, or click it';
         setHtml(ask.querySelector('.hint'), hint);
       }
@@ -5355,8 +5487,58 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
 
   // ---------------------------------------------------------------- input
 
-  const P1KEYS = { KeyW: 'up', KeyS: 'down', KeyA: 'power', KeyD: 'lock', Space: 'action' };
-  const P2KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'power', ArrowRight: 'lock', Enter: 'action', NumpadEnter: 'action' };
+  // W A S D and the arrows move your binoculars (so does the mouse, or a finger); the rest are one key each
+  const P1KEYS = { KeyE: 'up', KeyQ: 'down', KeyF: 'power', Space: 'lock' };
+  const P2KEYS = { Period: 'up', Comma: 'down', Slash: 'power', Enter: 'lock', NumpadEnter: 'lock' };
+  const AIM1 = { KeyW: [0, 1], KeyS: [0, -1], KeyA: [-1, 0], KeyD: [1, 0] };
+  const AIM2 = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+  const AIM_SPEED = 9; // lens units a second with the keys
+  const held = new Set();
+  const mouseAim = [null, null]; // where the mouse is pointing over each player's view
+  const drags = new Map(); // touch: pointerId -> { i, sx, sy, ax, ay }
+  function aimInput(dt) {
+    const S = st.match;
+    if (!S || st.mode !== 'match') return;
+    const two = S.mode === '2p';
+    S.players.forEach((P, i) => {
+      if (!P.human) return;
+      let dx = 0, dy = 0;
+      for (const mp of two ? [i ? AIM2 : AIM1] : [AIM1, AIM2]) for (const code in mp) if (held.has(code)) { dx += mp[code][0]; dy += mp[code][1]; }
+      if (dx || dy) { mouseAim[i] = null; S.aimBy(i, dx * AIM_SPEED * dt, dy * AIM_SPEED * dt); }
+      else if (mouseAim[i]) {
+        const a = P.aim, k = 1 - Math.exp(-16 * dt);
+        S.aimAt(i, a.x + (mouseAim[i].x - a.x) * k, a.y + (mouseAim[i].y - a.y) * k);
+      }
+    });
+  }
+  const viewAt = (x, y) => rects.findIndex((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+  const toAim = (i, x, y) => ({ x: (x - rects[i].x - rects[i].w / 2) * upp, y: -(y - rects[i].y - rects[i].h / 2) * upp });
+  // the mouse: your binoculars go where you point (over your own view)
+  window.addEventListener('pointermove', (e) => {
+    const S = st.match;
+    if (!S || st.mode !== 'match') return;
+    const d = drags.get(e.pointerId);
+    if (d) { S.aimAt(d.i, d.ax + (e.clientX - d.sx) * upp * 1.3, d.ay - (e.clientY - d.sy) * upp * 1.3); return; }
+    if (e.pointerType === 'touch') return;
+    const i = viewAt(e.clientX, e.clientY);
+    if (i >= 0 && S.players[i].human) mouseAim[i] = toAim(i, e.clientX, e.clientY);
+  });
+  // a finger: drag on your own side (the binoculars move as far as your finger does, so it never covers them)
+  window.addEventListener('pointerdown', (e) => {
+    const S = st.match;
+    if (!S || st.mode !== 'match' || e.pointerType === 'mouse') return;
+    if (e.target.closest && e.target.closest('button')) return;
+    const i = viewAt(e.clientX, e.clientY);
+    if (i < 0 || !S.players[i].human) return;
+    for (const [id, d] of drags) if (d.i === i) drags.delete(id);
+    drags.set(e.pointerId, { i, sx: e.clientX, sy: e.clientY, ax: S.players[i].aim.x, ay: S.players[i].aim.y });
+    e.preventDefault();
+  }, { passive: false });
+  const endDrag = (e) => { drags.delete(e.pointerId); };
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+  window.addEventListener('keyup', (e) => { held.delete(e.code); });
+  window.addEventListener('blur', () => { held.clear(); drags.clear(); });
   const firstGesture = () => {
     const was = Kit.sound.isRunning && Kit.sound.isRunning();
     Kit.sound.init();
@@ -5370,9 +5552,11 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
   function canNext() { return st.match && st.match.phase === 'result' && st.reveal && st.reveal.stamped; }
   function next() { if (canNext()) { SFX.click(); st.match.next(); } }
 
+  // some keyboards (and test tools) leave e.code empty for punctuation: fall back to the character
+  const CODE_OF = { '.': 'Period', '>': 'Period', ',': 'Comma', '<': 'Comma', '/': 'Slash' };
   window.addEventListener('keydown', (e) => {
     firstGesture();
-    const c = e.code;
+    const c = e.code || CODE_OF[e.key] || '';
     if (c === 'KeyM') { toggleMute(); return; }
     const S = st.match;
     if (st.mode === 'match' && S) {
@@ -5383,6 +5567,13 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
         return;
       }
       const two = S.mode === '2p';
+      if (c in AIM1 || c in AIM2) {
+        e.preventDefault();
+        held.add(c);
+        // a quick tap still nudges them (it may be let go before the next frame); holding keeps them moving
+        if (!e.repeat) { const d = AIM1[c] || AIM2[c], i = two ? (c in AIM1 ? 0 : 1) : 0; mouseAim[i] = null; S.aimBy(i, d[0] * 0.6, d[1] * 0.6); }
+        return;
+      }
       const dig = /^(?:Digit|Numpad)([0-9])$/.exec(c);
       if (dig && !two) { e.preventDefault(); if (!e.repeat) S.typeDigit(0, Number(dig[1])); return; }
       if (c === 'Backspace' && !two) { e.preventDefault(); S.backspace(0); return; }
@@ -5397,7 +5588,6 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       else if (act === 'down') S.adjust(i, -1);
       else if (act === 'power') usePower(i);
       else if (act === 'lock') S.lockNow(i); // while counting: I'm ready (and locks a clicker count)
-      else if (act === 'action') { if (S.phase === 'answer') S.lock(i); else usePower(i); }
       return;
     }
     if (st.mode === 'pause') {
@@ -5519,6 +5709,9 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     st.treatFly = null;
     st.shouted = false;
     st.pendingTreat = null;
+    mouseAim[0] = mouseAim[1] = null;
+    drags.clear();
+    held.clear();
     fx.clear();
     hideBadges();
     clearToasts();
@@ -5744,6 +5937,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       st.demo.events.length = 0;
       if (st.demo.phase === 'final') startDemo();
     }
+    aimInput(dt);
     const W = cur();
     syncAnimals(W, dt);
     for (let i = 0; i < 2; i++) {
@@ -5754,7 +5948,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
       tintField(i, st.frostK[i]);
       if (helis[i] || (P && P.char === 'pilot')) {
         const H = heli(i);
-        A.updateHeli(H, i, W ? W.lensFor(i) : C.lens.radius, !!(P && P.lit) && st.mode !== 'final', dt);
+        A.updateHeli(H, i, W ? W.lensFor(i) : C.lens.radius, !!(P && P.lit) && st.mode !== 'final', dt, P ? P.aim : null);
       }
     }
     // little ice sparkles over a frozen field
@@ -5784,6 +5978,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     updatePip(dt);
     updateTreatFly();
     updateSpots();
+    moveMasks();
     updateToasts();
     updateBanner();
     paintMasks();
@@ -5879,6 +6074,7 @@ SPOT.TITLE = 'SPOT TT ANIMALS';
     adjust(i, d) { return st.match && st.match.adjust(i, d); },
     lock(i) { return st.match && st.match.lock(i); },
     ready(i = 0) { return st.match && st.match.ready(i); },
+    aim(i, x, y) { const S = st.match; if (!S) return null; if (x !== undefined) { mouseAim[i] = null; S.aimAt(i, x, y); } return Object.assign({}, S.players[i].aim, { limit: S.aimLimit(i) }); },
     lockNow(i = 0) { return st.match && st.match.lockNow(i); },
     next() { const S = st.match; if (S && st.reveal) st.reveal.stamped = true; if (S && S.phase === 'result') { S.next(); game.step(DT); } return game.state(); },
     // jump to the last `left` seconds of the observation (default: the end)
@@ -5905,16 +6101,16 @@ Kit.help.setup({
   title: SPOT.TITLE, // the name lives in js/title.js
   cols: ['Player 1 (left)', 'Player 2 (right)'],
   keys: [
-    ['count +1 · −1 (your hidden clicker)', 'W S', '↑ ↓'],
-    ['use your power ❄️ freeze · 🚁 spotlight', 'A or Space', '← or Enter'],
-    ['ready? lock your answer (any time, even while counting)', 'D', '→'],
-    ['after the count: lock it (you have 30 s)', 'D or Space', '→ or Enter'],
+    ['move your binoculars (or just use the mouse)', 'W A S D', '↑ ← ↓ →'],
+    ['count +1 · −1 (your hidden clicker)', 'E Q', '> <'],
+    ['use your power ❄️ freeze · 🚁 spotlight', 'F', '/'],
+    ['I\'m ready · lock your answer (you have 30 s)', 'Space', 'Enter'],
     ['VS Computer: type the number', '0 – 9 · Backspace', ''],
     ['call your brother · high five', 'T', ''],
     ['next round · pause · sound', 'Enter · P or Esc · M', ''],
   ],
   note: 'Two players: your count is hidden (it shows ●● whatever the number), so the other player can\'t read it. VS Computer: type the number any time, even while you\'re still counting, and it locks by itself (1 and 2 wait a moment for a second digit). Call your brother as often as you like: he spots your hiding animals and has your back once.',
-  touch: 'Tap your power button while you count. Sure already? Tap ✋ READY. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother\'s face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.',
+  touch: 'Drag on your side to move your binoculars. Tap your power button while you count. Sure already? Tap ✋ READY. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother\'s face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.',
 });
 
 </script>
@@ -5965,8 +6161,6 @@ Kit.help.setup({
     'READY': '好了', 'ON!': '开着！', '🌙 NIGHT ONLY': '🌙 只能晚上用',
     '✓ LOCKED': '✓ 锁定了', 'the computer has answered': '电脑已经答了', 'the computer is thinking': '电脑在想',
     'hidden until both are in': '两个人都答完才揭晓', 'locked in!': '锁定了！', 'tap your number': '点你的数字',
-    '↑ ↓ to fix your count · → or Enter to lock': '↑ ↓ 改数字 · → 或回车 锁定',
-    'W S to fix your count · D or Space to lock': 'W S 改数字 · D 或空格 锁定',
     'type the number, or click it': '输入数字，或者点一下',
     'NO ANSWER': '没回答', 'Animals': '动物', 'Answer': '答案', 'Result': '结果',
     'NEXT ROUND ▶': '下一轮 ▶', 'FINAL SCORE ▶': '最终比分 ▶',
@@ -5979,8 +6173,13 @@ Kit.help.setup({
     // answering early (Alan's request)
     '✋ READY': '✋ 数好了', '⏰ TOO SLOW!': '⏰ 太慢啦！', 'too slow this time!': '这次太慢啦！',
     'locked! the other player is still counting': '锁定了！对方还在数',
-    'ready? lock your answer (any time, even while counting)': '数好了？锁定答案（随时都行，数的时候也可以）',
-    'after the count: lock it (you have 30 s)': '数完以后：锁定答案（有 30 秒）',
+    // the keys (js/keys.js) and moving the binoculars
+    'move your binoculars (or just use the mouse)': '移动望远镜（直接用鼠标也行）',
+    'count +1 · −1 (your hidden clicker)': '计数 +1 · −1（藏起来的计数器）',
+    'use your power ❄️ freeze · 🚁 spotlight': '用本领 ❄️ 冻住 · 🚁 探照灯',
+    "I'm ready · lock your answer (you have 30 s)": '数好了 · 锁定答案（有 30 秒）',
+    'E Q to fix your count · Space to lock': 'E Q 改数字 · 空格 锁定',
+    '> < to fix your count · Enter to lock': '> < 改数字 · 回车 锁定',
     // your brother (the companion) and the high five
     'HIGH FIVE': '击掌', '✋ HIGH FIVE!': '✋ 击掌！', '👀 SPOT THE HIDING ONES!': '👀 找找藏起来的！', '🛡️ Saved!': '🛡️ 救回来了！',
     'he has your back once': '他会帮你一次',
@@ -5988,12 +6187,10 @@ Kit.help.setup({
     'call your brother · high five': '叫兄弟 · 击掌',
     "Two players: your count is hidden (it shows ●● whatever the number), so the other player can't read it. VS Computer: type the number any time, even while you're still counting, and it locks by itself (1 and 2 wait a moment for a second digit). Call your brother as often as you like: he spots your hiding animals and has your back once.":
       '双人：你的数字是藏起来的（不管多少都显示 ●●），对方看不到。对战电脑：随时都能输入数字，数的时候也可以，会自动锁定（1 和 2 会等一下第二位数字）。兄弟随时可以叫：他帮你找藏起来的动物，还会救你一次。',
-    "Tap your power button while you count. Sure already? Tap ✋ READY. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother's face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.":
-      '数的时候点你的本领按钮。已经数好了？点 ✋ 数好了。望远镜关上以后，点 0 到 20 里你的数字，就锁定了。点兄弟的脸叫他来（双人：栅栏上的击掌按钮）。两个人用 iPad：各点自己那一边。',
+    "Drag on your side to move your binoculars. Tap your power button while you count. Sure already? Tap ✋ READY. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother's face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.":
+      '在自己那边拖动来移动望远镜。数的时候点你的本领按钮。已经数好了？点 ✋ 数好了。望远镜关上以后，点 0 到 20 里你的数字，就锁定了。点兄弟的脸叫他来（双人：栅栏上的击掌按钮）。两个人用 iPad：各点自己那一边。',
     // the ? panel (js/keys.js)
     'Player 1 (left)': '玩家 1（左边）', 'Player 2 (right)': '玩家 2（右边）',
-    'count +1 · −1 (your hidden clicker)': '计数 +1 · −1（藏起来的计数器）',
-    'use your power ❄️ freeze · 🚁 spotlight': '用本领 ❄️ 冻住 · 🚁 探照灯',
     'VS Computer: type the number': '对战电脑：输入数字',
     'next round · pause · sound': '下一轮 · 暂停 · 声音',
   });

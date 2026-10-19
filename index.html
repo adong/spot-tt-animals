@@ -33,8 +33,11 @@
   body { background: radial-gradient(ellipse at 50% 30%, #8ed36a, #4f9a35 60%, #3b7a28); }
   body.night { background: radial-gradient(ellipse at 50% 30%, #2f3d78, #1b2350 60%, #10142e); }
   #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  .mask { position: fixed; display: none; pointer-events: none; border-radius: 16px; }
-  .playing .mask { display: block; }
+  /* the binocular frame: a big painted canvas that slides inside a window the size of the view (moving it is just a transform) */
+  .maskwrap { position: fixed; display: none; overflow: hidden; pointer-events: none; border-radius: 16px; }
+  .playing .maskwrap { display: block; }
+  .mask { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
+  .playing #view { cursor: crosshair; }
   .hidden { display: none !important; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   button:focus { outline: none; }
@@ -351,6 +354,10 @@
   /* standing up, the lenses nearly fill the view's width: the power button goes in the bottom-right corner, which is always frame */
   .portrait .pow { left: auto; right: 10px; translate: 0 0; }
   .portrait .pow.no { animation-name: nope2; }
+  /* standing up, the cards sit in the top corners: READY and the clicker go just under them */
+  .portrait .readybtn { left: 12px; top: 72px; translate: 0 0; }
+  .portrait .clicker, .portrait .pui.p1 .clicker { left: auto; right: 12px; top: 72px; }
+  .portrait.short .readybtn, .portrait.short .clicker, .portrait.short .pui.p1 .clicker { top: 54px; }
   @keyframes nope2 { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
   @media (max-height: 620px) {
     .ccard { width: 160px; padding: 6px 8px; gap: 2px; }
@@ -380,8 +387,8 @@
 </head>
 <body>
 <canvas id="view"></canvas>
-<canvas id="mask0" class="mask"></canvas>
-<canvas id="mask1" class="mask"></canvas>
+<div class="maskwrap" id="mw0"><canvas id="mask0" class="mask"></canvas></div>
+<div class="maskwrap" id="mw1"><canvas id="mask1" class="mask"></canvas></div>
 <canvas id="spot0" class="spotc"></canvas>
 <canvas id="spot1" class="spotc"></canvas>
 <div id="fence"></div>
@@ -399,19 +406,19 @@
     <div class="ibtns"><button id="pauseBtn" class="ibtn" title="Pause (P)">❚❚</button><button class="ibtn muteBtn" title="Sound (M)">🔊</button></div>
   </div>
   <div class="pui p0" id="pui0">
-    <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">A</kbd><em></em></button>
+    <button class="pow" id="pow0"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">F</kbd><em></em></button>
     <div class="passive hidden" id="pas0">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
-    <div class="clicker keyhint hidden" id="clk0"><kbd>W</kbd>+1 <kbd>S</kbd>−1 · <kbd>D</kbd>lock<b>●●</b></div>
-    <button class="readybtn hidden" id="rdy0">✋ READY<kbd class="keyhint">D</kbd></button>
+    <div class="clicker keyhint hidden" id="clk0"><kbd>E</kbd>+1 <kbd>Q</kbd>−1 · <kbd>Space</kbd>lock<b>●●</b></div>
+    <button class="readybtn hidden" id="rdy0">✋ READY<kbd class="keyhint">Space</kbd></button>
     <div class="ask hidden" id="ask0"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp0"></div>
     <div class="ptoasts" id="pt0"></div>
   </div>
   <div class="pui p1" id="pui1">
-    <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">←</kbd><em></em></button>
+    <button class="pow" id="pow1"><span class="in"></span><span class="e">❄️</span><small>FREEZE</small><kbd class="keyhint">/</kbd><em></em></button>
     <div class="passive hidden" id="pas1">🔭 BIG BINOCULARS<span class="ao"> · always on</span></div>
-    <div class="clicker keyhint hidden" id="clk1"><kbd>↑</kbd>+1 <kbd>↓</kbd>−1 · <kbd>→</kbd>lock<b>●●</b></div>
-    <button class="readybtn hidden" id="rdy1">✋ READY<kbd class="keyhint">→</kbd></button>
+    <div class="clicker keyhint hidden" id="clk1"><kbd>&gt;</kbd>+1 <kbd>&lt;</kbd>−1 · <kbd>Enter</kbd>lock<b>●●</b></div>
+    <button class="readybtn hidden" id="rdy1">✋ READY<kbd class="keyhint">Enter</kbd></button>
     <div class="ask hidden" id="ask1"><div class="q"></div><div class="row2"><div class="ansbox"></div><div class="left">TIME LEFT<b>3</b></div></div><div class="grid"></div><div class="hint"></div></div>
     <div class="stamp hidden" id="stamp1"></div>
     <div class="ptoasts" id="pt1"></div>

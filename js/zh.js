@@ -44,8 +44,6 @@
     'READY': '好了', 'ON!': '开着！', '🌙 NIGHT ONLY': '🌙 只能晚上用',
     '✓ LOCKED': '✓ 锁定了', 'the computer has answered': '电脑已经答了', 'the computer is thinking': '电脑在想',
     'hidden until both are in': '两个人都答完才揭晓', 'locked in!': '锁定了！', 'tap your number': '点你的数字',
-    '↑ ↓ to fix your count · → or Enter to lock': '↑ ↓ 改数字 · → 或回车 锁定',
-    'W S to fix your count · D or Space to lock': 'W S 改数字 · D 或空格 锁定',
     'type the number, or click it': '输入数字，或者点一下',
     'NO ANSWER': '没回答', 'Animals': '动物', 'Answer': '答案', 'Result': '结果',
     'NEXT ROUND ▶': '下一轮 ▶', 'FINAL SCORE ▶': '最终比分 ▶',
@@ -58,8 +56,13 @@
     // answering early (Alan's request)
     '✋ READY': '✋ 数好了', '⏰ TOO SLOW!': '⏰ 太慢啦！', 'too slow this time!': '这次太慢啦！',
     'locked! the other player is still counting': '锁定了！对方还在数',
-    'ready? lock your answer (any time, even while counting)': '数好了？锁定答案（随时都行，数的时候也可以）',
-    'after the count: lock it (you have 30 s)': '数完以后：锁定答案（有 30 秒）',
+    // the keys (js/keys.js) and moving the binoculars
+    'move your binoculars (or just use the mouse)': '移动望远镜（直接用鼠标也行）',
+    'count +1 · −1 (your hidden clicker)': '计数 +1 · −1（藏起来的计数器）',
+    'use your power ❄️ freeze · 🚁 spotlight': '用本领 ❄️ 冻住 · 🚁 探照灯',
+    "I'm ready · lock your answer (you have 30 s)": '数好了 · 锁定答案（有 30 秒）',
+    'E Q to fix your count · Space to lock': 'E Q 改数字 · 空格 锁定',
+    '> < to fix your count · Enter to lock': '> < 改数字 · 回车 锁定',
     // your brother (the companion) and the high five
     'HIGH FIVE': '击掌', '✋ HIGH FIVE!': '✋ 击掌！', '👀 SPOT THE HIDING ONES!': '👀 找找藏起来的！', '🛡️ Saved!': '🛡️ 救回来了！',
     'he has your back once': '他会帮你一次',
@@ -67,12 +70,10 @@
     'call your brother · high five': '叫兄弟 · 击掌',
     "Two players: your count is hidden (it shows ●● whatever the number), so the other player can't read it. VS Computer: type the number any time, even while you're still counting, and it locks by itself (1 and 2 wait a moment for a second digit). Call your brother as often as you like: he spots your hiding animals and has your back once.":
       '双人：你的数字是藏起来的（不管多少都显示 ●●），对方看不到。对战电脑：随时都能输入数字，数的时候也可以，会自动锁定（1 和 2 会等一下第二位数字）。兄弟随时可以叫：他帮你找藏起来的动物，还会救你一次。',
-    "Tap your power button while you count. Sure already? Tap ✋ READY. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother's face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.":
-      '数的时候点你的本领按钮。已经数好了？点 ✋ 数好了。望远镜关上以后，点 0 到 20 里你的数字，就锁定了。点兄弟的脸叫他来（双人：栅栏上的击掌按钮）。两个人用 iPad：各点自己那一边。',
+    "Drag on your side to move your binoculars. Tap your power button while you count. Sure already? Tap ✋ READY. When the binoculars shut, tap your number from 0 to 20: that locks it. Tap your brother's face to call him (two players: the high five on the fence). Two players on an iPad: each taps on their own side.":
+      '在自己那边拖动来移动望远镜。数的时候点你的本领按钮。已经数好了？点 ✋ 数好了。望远镜关上以后，点 0 到 20 里你的数字，就锁定了。点兄弟的脸叫他来（双人：栅栏上的击掌按钮）。两个人用 iPad：各点自己那一边。',
     // the ? panel (js/keys.js)
     'Player 1 (left)': '玩家 1（左边）', 'Player 2 (right)': '玩家 2（右边）',
-    'count +1 · −1 (your hidden clicker)': '计数 +1 · −1（藏起来的计数器）',
-    'use your power ❄️ freeze · 🚁 spotlight': '用本领 ❄️ 冻住 · 🚁 探照灯',
     'VS Computer: type the number': '对战电脑：输入数字',
     'next round · pause · sound': '下一轮 · 暂停 · 声音',
   });

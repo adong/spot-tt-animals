@@ -235,20 +235,36 @@
 
   const masks = [$('mask0'), $('mask1')];
   const maskKey = ['', ''];
+  const maskOff = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+  // The frame is painted once, bigger than the view by how far the binoculars can move, with the lenses in its middle;
+  // pointing them somewhere just slides it (moveMasks), so it never has to be repainted while you look around.
   function paintMasks(force) {
-    const v = st.view;
-    if (!v || (st.mode !== 'match' && st.mode !== 'pause')) return;
+    const v = st.view, S = st.match;
+    if (!v || !S || (st.mode !== 'match' && st.mode !== 'pause')) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     for (let i = 0; i < 2; i++) {
-      const r = rects[i], P = v.players[i];
+      const r = rects[i], P = v.players[i], L = S.aimLimit(i);
+      const mx = Math.ceil(L.x / upp) + 8, my = Math.ceil(L.y / upp) + 8;
+      maskOff[i] = { x: mx, y: my };
       const o = {
-        w: r.w, h: r.h, dpr, r: P.lens / upp, lobe: C.lens.lobe, open: smooth(st.lensOpen[i]),
+        w: r.w + 2 * mx, h: r.h + 2 * my, dpr, r: P.lens / upp, lobe: C.lens.lobe, open: smooth(st.lensOpen[i]),
         night: v.sky === 'night', lit: st.litK[i] > 0.5, frost: Math.round(st.frostK[i] * 10) / 10, color: PCOL[i],
       };
       const key = `${o.w},${o.h},${o.r.toFixed(1)},${o.open.toFixed(3)},${o.night},${o.lit},${o.frost}`;
       if (key === maskKey[i] && !force) continue;
       maskKey[i] = key;
       A.paintMask(masks[i], o);
+      masks[i].style.width = `${o.w}px`;
+      masks[i].style.height = `${o.h}px`;
+    }
+    moveMasks();
+  }
+  function moveMasks() {
+    const S = st.match;
+    if (!S) return;
+    for (let i = 0; i < 2; i++) {
+      const a = S.players[i].aim;
+      masks[i].style.transform = `translate(${(-maskOff[i].x + a.x / upp).toFixed(1)}px, ${(-maskOff[i].y - a.y / upp).toFixed(1)}px)`;
     }
   }
 
@@ -303,7 +319,8 @@
       st.spotOn[i] = on;
       const r = rects[i];
       const pts = on ? S.spotted(i).map((a) => { const q = M.toLens(C, a.x, a.z, 0.4); return [r.w / 2 + q.sx / upp, r.h / 2 - q.sy / upp]; }) : [];
-      A.paintSpots(spots[i], pts, { w: r.w, h: r.h, dpr, r: S ? S.lensFor(i) / upp : 1, lobe: C.lens.lobe, t: st.time });
+      const aim = S ? S.players[i].aim : { x: 0, y: 0 };
+      A.paintSpots(spots[i], pts, { w: r.w, h: r.h, dpr, r: S ? S.lensFor(i) / upp : 1, lobe: C.lens.lobe, t: st.time, ax: aim.x / upp, ay: -aim.y / upp });
     }
   }
 
@@ -407,7 +424,9 @@
     // one scale for both views (fair: animals look the same size to both), big enough for the bigger binoculars
     const S = st.match;
     const lensMax = S ? Math.max(S.lensFor(0), S.lensFor(1)) : C.lens.radius;
-    const needW = 2 * (C.lens.lobe * lensMax + lensMax) + 1.1, needH = 2 * lensMax + 1.4;
+    // ...and the whole field fits in the view, so the binoculars can reach every corner of it
+    const needW = Math.max(2 * (C.lens.lobe * lensMax + lensMax) + 1.1, C.field.width + 1.2);
+    const needH = Math.max(2 * lensMax + 1.4, C.field.depth * Math.sin(A.TILT) + 2.0);
     upp = Math.max(needW / rects[0].w, needH / rects[0].h);
     cams.forEach((c, i) => {
       const r = rects[i];
@@ -416,7 +435,7 @@
     });
     for (let i = 0; i < 2; i++) {
       const r = rects[i];
-      place(masks[i], r.x, r.y, r.w, r.h);
+      place($('mw' + i), r.x, r.y, r.w, r.h);
       place(spots[i], r.x, r.y, r.w, r.h);
       place($('pui' + i), r.x, r.y, r.w, r.h);
     }
@@ -506,7 +525,7 @@
       pow.querySelector('small').textContent = ch.power;
       pow.style.pointerEvents = P.human ? '' : 'none';
       const kb = pow.querySelector('kbd');
-      kb.textContent = i && S.mode === '2p' ? '←' : 'A';
+      kb.textContent = i && S.mode === '2p' ? '/' : 'F';
       kb.style.display = P.human ? '' : 'none';
       $('pas' + i).classList.toggle('hidden', P.char !== 'teddy');
       const clk = $('clk' + i);
@@ -625,7 +644,7 @@
         else if (p.locked && S.mode === '2p' && v.phase === 'observe') hint = 'locked! the other player is still counting';
         else if (p.locked) hint = S.mode === '2p' ? 'hidden until both are in' : st.shouted ? `🛡️ ${nameOf(v.buddy ? v.buddy.kind : 'tommy')} ANSWERED FOR YOU!` : 'locked in!';
         else if (isTouch) hint = 'tap your number';
-        else if (S.mode === '2p') hint = i ? '↑ ↓ to fix your count · → or Enter to lock' : 'W S to fix your count · D or Space to lock';
+        else if (S.mode === '2p') hint = i ? '> < to fix your count · Enter to lock' : 'E Q to fix your count · Space to lock';
         else hint = 'type the number, or click it';
         setHtml(ask.querySelector('.hint'), hint);
       }
@@ -793,8 +812,58 @@
 
   // ---------------------------------------------------------------- input
 
-  const P1KEYS = { KeyW: 'up', KeyS: 'down', KeyA: 'power', KeyD: 'lock', Space: 'action' };
-  const P2KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'power', ArrowRight: 'lock', Enter: 'action', NumpadEnter: 'action' };
+  // W A S D and the arrows move your binoculars (so does the mouse, or a finger); the rest are one key each
+  const P1KEYS = { KeyE: 'up', KeyQ: 'down', KeyF: 'power', Space: 'lock' };
+  const P2KEYS = { Period: 'up', Comma: 'down', Slash: 'power', Enter: 'lock', NumpadEnter: 'lock' };
+  const AIM1 = { KeyW: [0, 1], KeyS: [0, -1], KeyA: [-1, 0], KeyD: [1, 0] };
+  const AIM2 = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+  const AIM_SPEED = 9; // lens units a second with the keys
+  const held = new Set();
+  const mouseAim = [null, null]; // where the mouse is pointing over each player's view
+  const drags = new Map(); // touch: pointerId -> { i, sx, sy, ax, ay }
+  function aimInput(dt) {
+    const S = st.match;
+    if (!S || st.mode !== 'match') return;
+    const two = S.mode === '2p';
+    S.players.forEach((P, i) => {
+      if (!P.human) return;
+      let dx = 0, dy = 0;
+      for (const mp of two ? [i ? AIM2 : AIM1] : [AIM1, AIM2]) for (const code in mp) if (held.has(code)) { dx += mp[code][0]; dy += mp[code][1]; }
+      if (dx || dy) { mouseAim[i] = null; S.aimBy(i, dx * AIM_SPEED * dt, dy * AIM_SPEED * dt); }
+      else if (mouseAim[i]) {
+        const a = P.aim, k = 1 - Math.exp(-16 * dt);
+        S.aimAt(i, a.x + (mouseAim[i].x - a.x) * k, a.y + (mouseAim[i].y - a.y) * k);
+      }
+    });
+  }
+  const viewAt = (x, y) => rects.findIndex((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+  const toAim = (i, x, y) => ({ x: (x - rects[i].x - rects[i].w / 2) * upp, y: -(y - rects[i].y - rects[i].h / 2) * upp });
+  // the mouse: your binoculars go where you point (over your own view)
+  window.addEventListener('pointermove', (e) => {
+    const S = st.match;
+    if (!S || st.mode !== 'match') return;
+    const d = drags.get(e.pointerId);
+    if (d) { S.aimAt(d.i, d.ax + (e.clientX - d.sx) * upp * 1.3, d.ay - (e.clientY - d.sy) * upp * 1.3); return; }
+    if (e.pointerType === 'touch') return;
+    const i = viewAt(e.clientX, e.clientY);
+    if (i >= 0 && S.players[i].human) mouseAim[i] = toAim(i, e.clientX, e.clientY);
+  });
+  // a finger: drag on your own side (the binoculars move as far as your finger does, so it never covers them)
+  window.addEventListener('pointerdown', (e) => {
+    const S = st.match;
+    if (!S || st.mode !== 'match' || e.pointerType === 'mouse') return;
+    if (e.target.closest && e.target.closest('button')) return;
+    const i = viewAt(e.clientX, e.clientY);
+    if (i < 0 || !S.players[i].human) return;
+    for (const [id, d] of drags) if (d.i === i) drags.delete(id);
+    drags.set(e.pointerId, { i, sx: e.clientX, sy: e.clientY, ax: S.players[i].aim.x, ay: S.players[i].aim.y });
+    e.preventDefault();
+  }, { passive: false });
+  const endDrag = (e) => { drags.delete(e.pointerId); };
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+  window.addEventListener('keyup', (e) => { held.delete(e.code); });
+  window.addEventListener('blur', () => { held.clear(); drags.clear(); });
   const firstGesture = () => {
     const was = Kit.sound.isRunning && Kit.sound.isRunning();
     Kit.sound.init();
@@ -808,9 +877,11 @@
   function canNext() { return st.match && st.match.phase === 'result' && st.reveal && st.reveal.stamped; }
   function next() { if (canNext()) { SFX.click(); st.match.next(); } }
 
+  // some keyboards (and test tools) leave e.code empty for punctuation: fall back to the character
+  const CODE_OF = { '.': 'Period', '>': 'Period', ',': 'Comma', '<': 'Comma', '/': 'Slash' };
   window.addEventListener('keydown', (e) => {
     firstGesture();
-    const c = e.code;
+    const c = e.code || CODE_OF[e.key] || '';
     if (c === 'KeyM') { toggleMute(); return; }
     const S = st.match;
     if (st.mode === 'match' && S) {
@@ -821,6 +892,13 @@
         return;
       }
       const two = S.mode === '2p';
+      if (c in AIM1 || c in AIM2) {
+        e.preventDefault();
+        held.add(c);
+        // a quick tap still nudges them (it may be let go before the next frame); holding keeps them moving
+        if (!e.repeat) { const d = AIM1[c] || AIM2[c], i = two ? (c in AIM1 ? 0 : 1) : 0; mouseAim[i] = null; S.aimBy(i, d[0] * 0.6, d[1] * 0.6); }
+        return;
+      }
       const dig = /^(?:Digit|Numpad)([0-9])$/.exec(c);
       if (dig && !two) { e.preventDefault(); if (!e.repeat) S.typeDigit(0, Number(dig[1])); return; }
       if (c === 'Backspace' && !two) { e.preventDefault(); S.backspace(0); return; }
@@ -835,7 +913,6 @@
       else if (act === 'down') S.adjust(i, -1);
       else if (act === 'power') usePower(i);
       else if (act === 'lock') S.lockNow(i); // while counting: I'm ready (and locks a clicker count)
-      else if (act === 'action') { if (S.phase === 'answer') S.lock(i); else usePower(i); }
       return;
     }
     if (st.mode === 'pause') {
@@ -957,6 +1034,9 @@
     st.treatFly = null;
     st.shouted = false;
     st.pendingTreat = null;
+    mouseAim[0] = mouseAim[1] = null;
+    drags.clear();
+    held.clear();
     fx.clear();
     hideBadges();
     clearToasts();
@@ -1182,6 +1262,7 @@
       st.demo.events.length = 0;
       if (st.demo.phase === 'final') startDemo();
     }
+    aimInput(dt);
     const W = cur();
     syncAnimals(W, dt);
     for (let i = 0; i < 2; i++) {
@@ -1192,7 +1273,7 @@
       tintField(i, st.frostK[i]);
       if (helis[i] || (P && P.char === 'pilot')) {
         const H = heli(i);
-        A.updateHeli(H, i, W ? W.lensFor(i) : C.lens.radius, !!(P && P.lit) && st.mode !== 'final', dt);
+        A.updateHeli(H, i, W ? W.lensFor(i) : C.lens.radius, !!(P && P.lit) && st.mode !== 'final', dt, P ? P.aim : null);
       }
     }
     // little ice sparkles over a frozen field
@@ -1222,6 +1303,7 @@
     updatePip(dt);
     updateTreatFly();
     updateSpots();
+    moveMasks();
     updateToasts();
     updateBanner();
     paintMasks();
@@ -1317,6 +1399,7 @@
     adjust(i, d) { return st.match && st.match.adjust(i, d); },
     lock(i) { return st.match && st.match.lock(i); },
     ready(i = 0) { return st.match && st.match.ready(i); },
+    aim(i, x, y) { const S = st.match; if (!S) return null; if (x !== undefined) { mouseAim[i] = null; S.aimAt(i, x, y); } return Object.assign({}, S.players[i].aim, { limit: S.aimLimit(i) }); },
     lockNow(i = 0) { return st.match && st.match.lockNow(i); },
     next() { const S = st.match; if (S && st.reveal) st.reveal.stamped = true; if (S && S.phase === 'result') { S.next(); game.step(DT); } return game.state(); },
     // jump to the last `left` seconds of the observation (default: the end)

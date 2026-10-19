@@ -58,9 +58,16 @@
     const t = (cfg.lens.tilt * Math.PI) / 180;
     return { sx: x, sy: -z * Math.sin(t) + y * Math.cos(t) };
   }
-  function inLens(cfg, r, x, z, y = 0) {
-    const p = toLens(cfg, x, z, y), o = cfg.lens.lobe * r;
-    return Math.hypot(p.sx - o, p.sy) < r || Math.hypot(p.sx + o, p.sy) < r;
+  // (ax, ay): where the binoculars are pointing, in lens units from the middle of the field (Alan: they move with your
+  // mouse, finger or keys, so you scout around your own field)
+  function inLens(cfg, r, x, z, y = 0, ax = 0, ay = 0) {
+    const p = toLens(cfg, x, z, y), o = cfg.lens.lobe * r, sx = p.sx - ax, sy = p.sy - ay;
+    return Math.hypot(sx - o, sy) < r || Math.hypot(sx + o, sy) < r;
+  }
+  // how far the binoculars can point from the middle: far enough that every spot in the field can be seen
+  function aimLimit(cfg, r) {
+    const t = (cfg.lens.tilt * Math.PI) / 180;
+    return { x: Math.max(0, cfg.field.width / 2 - 0.5 * r), y: Math.max(0, (cfg.field.depth / 2) * Math.sin(t) - 0.5 * r) };
   }
   // How much of the field a lens of radius r shows (0..1), by sampling a grid.
   function lensCover(cfg, r, n = 80) {
@@ -203,6 +210,7 @@
         ans: null,
         cpuWaitAt: null,
         spotT: 0, // two players: a high five lets you spot your hiding animals this long
+        aim: { x: 0, y: 0 }, // where this player's binoculars point (lens units from the middle of their field)
       }));
       this.rounds = this.cfg.roundsPerGame;
       this.observeT = this.cfg.difficulty[this.difficulty];
@@ -234,6 +242,7 @@
         if (this.cfg.powers.resetEachRound || this.round === 1) { P.power.activeT = 0; P.power.coolT = 0; }
         P.power.usesRound = 0;
         P.cpuWaitAt = null;
+        P.aim.x = P.aim.y = 0; // every round starts looking at the middle
       });
       this.cpuPlans = [null, null];
       this.phase = 'ready';
@@ -284,6 +293,7 @@
         this.tickPowers(dt);
         for (const P of this.players) if (P.spotT > 0) P.spotT = Math.max(0, P.spotT - dt);
         this.cpuObserve();
+        this.cpuAim();
         this.moveFields(dt);
         this.tickEarly(dt);
         const left = this.observeT - this.phaseT;
@@ -356,8 +366,28 @@
     }
     lensFor(i) { return lensRadius(this.cfg, this.players[i].char); }
     visibleCount(i) {
-      const r = this.lensFor(i);
-      return this.players[i].field.animals.filter((a) => inLens(this.cfg, r, a.x, a.z, 0.4)).length;
+      const r = this.lensFor(i), A = this.players[i].aim;
+      return this.players[i].field.animals.filter((a) => inLens(this.cfg, r, a.x, a.z, 0.4, A.x, A.y)).length;
+    }
+    // ---- moving the binoculars (Alan's decision on Teddy's open question: yes, they scan your own field)
+    aimLimit(i) { return aimLimit(this.cfg, this.lensFor(i)); }
+    aimAt(i, x, y) {
+      const P = this.players[i];
+      if (!P) return false;
+      const L = this.aimLimit(i);
+      P.aim.x = clamp(Number(x) || 0, -L.x, L.x);
+      P.aim.y = clamp(Number(y) || 0, -L.y, L.y);
+      return true;
+    }
+    aimBy(i, dx, dy) { const A = this.players[i] && this.players[i].aim; return !!A && this.aimAt(i, A.x + dx, A.y + dy); }
+    // the computer's binoculars sweep slowly round its field (just for show: it counts the same either way, no dice)
+    cpuAim() {
+      for (const P of this.players) {
+        if (P.human) continue;
+        const L = this.aimLimit(P.i), t = this.t;
+        P.aim.x = L.x * 0.75 * Math.sin(t * 0.37 + P.i * 1.3);
+        P.aim.y = L.y * 0.75 * Math.sin(t * 0.53 + P.i);
+      }
     }
 
     // ---- the computer player: it sees its own field and nothing else
@@ -554,8 +584,8 @@
     }
     spotted(i) {
       if (!this.spotting(i)) return [];
-      const r = this.lensFor(i);
-      return this.players[i].field.animals.filter((a) => !inLens(this.cfg, r, a.x, a.z, 0.4));
+      const r = this.lensFor(i), A = this.players[i].aim;
+      return this.players[i].field.animals.filter((a) => !inLens(this.cfg, r, a.x, a.z, 0.4, A.x, A.y));
     }
 
     // ---- the reveal
@@ -632,6 +662,7 @@
             saved: last ? last.saved[i] : null,
             yours: last ? last.yours[i] : null,
             spotting: this.spotting(i),
+            aim: { x: P.aim.x, y: P.aim.y },
           };
         }),
         result: last,
@@ -674,5 +705,5 @@
     },
   };
 
-  SPOT.sim = { Match, PHASES, CHARS, TREATS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, lensCover, powerTimes, progress };
+  SPOT.sim = { Match, PHASES, CHARS, TREATS, makeRng, randInt, dealRound, scoreRound, makeField, moveField, wanderTarget, lensRadius, toLens, inLens, aimLimit, lensCover, powerTimes, progress };
 })();
