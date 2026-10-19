@@ -9,7 +9,7 @@
   const SKY = { '☀️ DAY': '☀️ 白天', '🌙 NIGHT': '🌙 夜晚' };
   const DIFF = { EASY: '简单', MEDIUM: '中等', HARD: '困难' };
 
-  L.keep(['Backspace', 'Esc', 'TEDDY', 'TOMMY', 'ZOOM', 'TEDDY & TOMMY', 'SPOT', 'ANIMALS', 'SPOT TT ANIMALS', 'Claude Code', '1P', '2P', '???', '❓ ???']);
+  L.keep(['Backspace', 'Esc', 'TEDDY', 'TOMMY', 'ZOOM', 'TEDDY & TOMMY', 'SPOT', 'ANIMALS', 'SPOT TT ANIMALS', 'Spot TT Animals', 'Claude Code', '1P', '2P', '???', '❓ ???']);
   L.add({
     // title and menus
     'Look through your binoculars and count the animals!': '用望远镜数一数动物！',

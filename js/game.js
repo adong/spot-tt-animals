@@ -1207,7 +1207,7 @@
     const color = (s) => s.replace(/TT/, '<span class="a">T</span><span class="b">T</span>');
     $('logoMain').innerHTML = color(m ? m[1] : SPOT.TITLE);
     $('logoSub').textContent = m ? m[2] : '';
-    document.title = `${SPOT.TITLE} · Teddy & Tommy`;
+    document.title = `${SPOT.NAME || SPOT.TITLE} · Teddy & Tommy`;
     document.querySelectorAll('[data-face]').forEach((img) => { img.src = faces[img.dataset.face]; });
     $('playBtn').addEventListener('click', openSetup);
     $('charsBtn').addEventListener('click', openChars);

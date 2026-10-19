@@ -1,7 +1,7 @@
 /* The keys the ? panel shows. Press ? (Shift + /) in the game, or tap the round ? button.
    The panel and the freeze live in the shared kit: kit/help.js (Kit.help). */
 Kit.help.setup({
-  title: SPOT.TITLE, // the name lives in js/title.js
+  title: SPOT.NAME || SPOT.TITLE, // the name lives in js/title.js
   cols: ['Player 1 (left)', 'Player 2 (right)'],
   keys: [
     ['move your binoculars (or just use the mouse)', 'W A S D', '↑ ← ↓ →'],

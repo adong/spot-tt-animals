@@ -2,3 +2,4 @@
    The name is Teddy's. */
 window.SPOT = window.SPOT || {};
 SPOT.TITLE = 'SPOT TT ANIMALS';
+SPOT.NAME = 'Spot TT Animals'; // the name as the dashboard spells it: the browser tab and the ? panel (the logo uses TITLE)
